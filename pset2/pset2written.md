@@ -4,7 +4,7 @@ Matt Gardner
 6.4212
 9/18/2024
 
-### Exercise 2.1 c)
+### Exercise 2.1 b)
 
 Similar to increasing Kp in a standard closed-loop system, the gearbox improves system performance by diminishing the impact of the unstable pendulum plant's dynamics on the output response. Classical control tells us that the in->out transfer function $\frac{Y(s)}{R(s)}$ of the closed-loop system simplifies to $\frac{GH}{1+GH}$; increasing N in the plant causes the GH term to dominate the expected response, so GH/(1+GH) approaches 1, dampening the effects of all other dynamics of the plant H to produce a linear response. In the direct-drive case, the system is much more sensitive to input condition (i.e. desired position) as the sinusoidal state-dependent term dominates the response and produces oscillation in the output. The gearbox case behaves much more like a $\frac{Y(s)}{R(s)} = 1$ condition, where the output dynamics closely mirror the input no matter what input we provide.
 
