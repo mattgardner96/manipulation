@@ -25,3 +25,11 @@ ii) if the dimensionality of the configuration space is larger than the dimensio
 iii) yes, in cases where the configuration space of the robot has fewer dimensions than those existing in the operational space. For example, picture a car with steering angle locked at 0˚ positioned along the x axis. The car can only move along the x-axis. However, say we want the car to move along the y-axis. Since it only has one degree of freedom, it cannot move in more than one dimension. Unlocking steering angle provides a second degree of freedom enabling travel in the y-axis. In a manipulator, this can also occur when the Jacobian loses rank due to a singularity (such as a fully extended arm).
 
 **c)** at a singularity, the two-link manipulator has only 1 DOF. That means that the velocity of, say, $q_1$, is 0. Therefore, the matrix loses rank and the velocity of a single end-effector axis goes to zero as well. Thus, the manipulability ellipsoid collapses to a line segment where the arm can achieve a certain range of velocities in 1-dimensional space (along a line).
+
+### Past Project Summary
+
+I watched the Dreidel Spinning Robot video. Lily applies several different modeling/simulation techniques to first ensure that the dreidel appropriately spins as expected. Using the Kuka iiwa arm, Lily relaxes the velocity and position limits of the end effector joint ("wrist") to allow the robot to spin up the dreidel effectively. After the robot picks up the dreidel, the robot releases it and it spins accordingly. Finally, Lily investigates the Point Contact and Hydroelastic models of contact friction during dreidel spinup and compares the results.
+
+### Survey
+
+survey code is `iiwa kinematics`
