@@ -3,7 +3,9 @@ Matt Gardner, 6.4212, 9/10
 
 ### Question 1
 1.1 Initial Condition for `x(0) = 0.9`
+
 1.2 Angular Acceleration in ASCII: `alpha`
+
 1.3 `TestControllers.options.convergence_tol = 1`
 
 ### Question 2
