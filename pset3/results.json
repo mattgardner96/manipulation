@@ -1,0 +1,13 @@
+{
+    "tests": [
+        {
+            "name": "Test Simple QP problem",
+            "score": 4,
+            "max_score": 4,
+            "status": "passed"
+        }
+    ],
+    "leaderboard": [],
+    "execution_time": "0.00",
+    "score": 4
+}
