@@ -1,20 +1,19 @@
 {
     "tests": [
         {
-            "name": "Test icp implementation",
-            "score": 3,
-            "max_score": 3,
+            "name": "Test outlier removal",
+            "score": 2,
+            "max_score": 2,
             "status": "passed"
         },
         {
-            "name": "Test least square transform",
-            "score": 3,
-            "max_score": 3,
-            "status": "passed",
-            "output": "fixing improper rotation\n"
+            "name": "Test ransac method",
+            "score": 4,
+            "max_score": 4,
+            "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.59",
+    "execution_time": "0.34",
     "score": 6
 }
