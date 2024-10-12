@@ -2,13 +2,12 @@
     "tests": [
         {
             "name": "Testing the normal vectors",
-            "score": 0.0,
+            "score": 4,
             "max_score": 4,
-            "status": "failed",
-            "output": "Test Failed: False is not true : error at the point: \n [0.005852039211498017, 0.04123694354633341, 0.13310039061477708]                     \n normal is: [ 0.18870778 -0.97685627 -0.10070357]                     \n solution normal is: [-0.18845126  0.97714641  0.09834132]\n"
+            "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.04",
-    "score": 0.0
+    "execution_time": "0.21",
+    "score": 4
 }
