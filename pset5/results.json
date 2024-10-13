@@ -1,13 +1,13 @@
 {
     "tests": [
         {
-            "name": "Testing the normal vectors",
+            "name": "Test find_antipodal_pts",
             "score": 4,
             "max_score": 4,
             "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.20",
+    "execution_time": "7.29",
     "score": 4
 }
