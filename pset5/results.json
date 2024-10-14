@@ -5,7 +5,7 @@
             "score": 0.0,
             "max_score": 4,
             "status": "failed",
-            "output": "Test Failed: False is not true : Length of returned array is not correct.\n"
+            "output": "Test Failed: 0.010005219856486648 not less than or equal to 0.01\n"
         },
         {
             "name": "Test compute_darboux_frame",
@@ -18,10 +18,10 @@
             "score": 0.0,
             "max_score": 4,
             "status": "failed",
-            "output": "Test Failed: 'Timed Out'\n"
+            "output": "Test Failed: 1.0516809860736853e-05 not less than or equal to 1e-05 : The returned distance is not correct.\n"
         }
     ],
     "leaderboard": [],
-    "execution_time": "67.07",
+    "execution_time": "6.29",
     "score": 4.0
 }
