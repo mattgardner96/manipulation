@@ -1,13 +1,27 @@
 {
     "tests": [
         {
-            "name": "Test find_antipodal_pts",
+            "name": "Test compute_candidate_grasps",
+            "score": 0.0,
+            "max_score": 4,
+            "status": "failed",
+            "output": "Test Failed: False is not true : Length of returned array is not correct.\n"
+        },
+        {
+            "name": "Test compute_darboux_frame",
             "score": 4,
             "max_score": 4,
             "status": "passed"
+        },
+        {
+            "name": "Test find_minimum_distance",
+            "score": 0.0,
+            "max_score": 4,
+            "status": "failed",
+            "output": "Test Failed: 'Timed Out'\n"
         }
     ],
     "leaderboard": [],
-    "execution_time": "7.29",
-    "score": 4
+    "execution_time": "67.07",
+    "score": 4.0
 }
