@@ -3,7 +3,7 @@ directives:
     file: package://manipulation/iiwa_and_wsg.dmd.yaml
 - add_model:
     name: bin0
-    file: /work/manipulation/project/Crust_&_Conquer_PizzaBot/Object/bin.sdf
+    file: /manipulation/project/Object/bin.sdf
 - add_weld:
     parent: world
     child: bin0::bin_base
