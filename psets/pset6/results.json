@@ -1,0 +1,25 @@
+{
+    "tests": [
+        {
+            "name": "Test 40 degree bound for door angle",
+            "score": 2,
+            "max_score": 2,
+            "status": "passed"
+        },
+        {
+            "name": "Test 70 degree bound for door angle",
+            "score": 1,
+            "max_score": 1,
+            "status": "passed"
+        },
+        {
+            "name": "Test 10 degree bound for door angle",
+            "score": 2,
+            "max_score": 2,
+            "status": "passed"
+        }
+    ],
+    "leaderboard": [],
+    "execution_time": "0.00",
+    "score": 5
+}
