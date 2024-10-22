@@ -21,34 +21,45 @@ directives:
     name: table0
     file: package://pizzabot/objects/extra_heavy_duty_table_surface_only_collision.sdf
 
+- add_model:
+    name: table1
+    file: package://pizzabot/objects/extra_heavy_duty_table_surface_only_collision.sdf
+
 
 - add_weld:
     parent: world
     child: bin0::bin_base
     X_PC:
-      translation: [-0.05, -0.5, -0.015]
+      translation: [-1, -0.5, 0.75]
 
 - add_weld:
     parent: world
     child: bowl0::bowl
     X_PC:
-      translation: [-10, -11, 0.5]
+      translation: [-0.05, -0.5, 0.85]
 
 
 - add_weld:
     parent: world
     child: table0::link
     X_PC:
-      translation: [-10, -10, -0.015]
+      translation: [-0.05, -0.5, -0.015]
+
+- add_weld:
+    parent: world
+    child: table1::link
+    X_PC:
+      translation: [-1, -0.5, -0.015]
 
 - add_weld:
     parent: world
     child: oven1::ovenV1
     X_PC:
-      translation: [10, 10, -0.015]
+      translation: [1, -0.5, -0.015]
+      rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
 
 - add_weld:
     parent: world
     child: pan1::panV1
     X_PC:
-      translation: [-10, -10, 0.5]
+      translation: [-0.05, -0.5, 0.75]
