@@ -1,14 +1,13 @@
 {
     "tests": [
         {
-            "name": "Test solve_ik",
-            "score": 5,
-            "max_score": 5,
-            "status": "passed",
-            "output": "Succeeded in 2 tries!\nSucceeded in 3 tries!\nSucceeded in 2 tries!\nFailed!\n"
+            "name": "Test compute_ctrl",
+            "score": 4,
+            "max_score": 4,
+            "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "12.03",
-    "score": 5
+    "execution_time": "0.01",
+    "score": 4
 }
