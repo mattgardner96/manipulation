@@ -2,10 +2,9 @@
     "tests": [
         {
             "name": "Testing don_loss",
-            "score": 0.0,
+            "score": 4,
             "max_score": 4,
-            "status": "failed",
-            "output": "2429 matches, 1667 non-matches\n\nTest Failed: False is not true : Computed loss_matches is incorrect\n"
+            "status": "passed"
         },
         {
             "name": "Testing don_predict",
@@ -16,6 +15,6 @@
         }
     ],
     "leaderboard": [],
-    "execution_time": "2.79",
-    "score": 0.0
+    "execution_time": "3.46",
+    "score": 4.0
 }
