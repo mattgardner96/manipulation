@@ -1,13 +1,21 @@
 {
     "tests": [
         {
-            "name": "Testing deproject_pW_to_image",
-            "score": 3,
-            "max_score": 3,
-            "status": "passed"
+            "name": "Testing don_loss",
+            "score": 0.0,
+            "max_score": 4,
+            "status": "failed",
+            "output": "2429 matches, 1667 non-matches\n\nTest Failed: False is not true : Computed loss_matches is incorrect\n"
+        },
+        {
+            "name": "Testing don_predict",
+            "score": 0.0,
+            "max_score": 4,
+            "status": "failed",
+            "output": "Test Failed: False is not true : Predicted pixel position incorrect\n"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.37",
-    "score": 3
+    "execution_time": "2.79",
+    "score": 0.0
 }
