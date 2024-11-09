@@ -8,13 +8,12 @@
         },
         {
             "name": "Testing don_predict",
-            "score": 0.0,
+            "score": 4,
             "max_score": 4,
-            "status": "failed",
-            "output": "Test Failed: False is not true : Predicted pixel position incorrect\n"
+            "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "3.46",
-    "score": 4.0
+    "execution_time": "4.44",
+    "score": 8
 }
