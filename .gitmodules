@@ -1,0 +1,6 @@
+[submodule "drake"]
+	path = drake
+	url = https://github.com/RobotLocomotion/drake.git
+[submodule "manipulation"]
+	path = manipulation
+	url = https://github.com/RussTedrake/manipulation.git
