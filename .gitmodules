@@ -1,8 +1,0 @@
-[submodule "drake"]
-	path = drake
-	url = https://github.com/RobotLocomotion/drake/
-	ignore = dirty
-[submodule "manipulation"]
-	path = manipulation
-	url = https://github.com/RussTedrake/manipulation/
-	ignore = dirty
