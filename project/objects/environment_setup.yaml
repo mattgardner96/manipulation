@@ -1,66 +1,112 @@
 directives:
-- add_directives:
-    file: package://manipulation/iiwa_and_wsg.dmd.yaml
+
 - add_model:
-    name: bin0
-    file: package://pizzabot/objects/bin.sdf
+    name: mobile_iiwa
+    file: package://manipulation/mobile_iiwa14_primitive_collision.urdf
+    default_joint_positions:
+        iiwa_joint_1: [-1.57]
+        iiwa_joint_2: [0.1]
+        iiwa_joint_3: [0]
+        iiwa_joint_4: [-1.2]
+        iiwa_joint_5: [0]
+        iiwa_joint_6: [ 1.6]
+        iiwa_joint_7: [0]
+- add_model:
+    name: gripper
+    file: package://manipulation/schunk_wsg_50_welded_fingers.sdf
 
 - add_model:
     name: pan1
     file: package://pizzabot/objects/panV1.sdf
+    default_free_body_pose:
+        panV1:
+            translation: [-1, -0.5, 0.75]
 
 - add_model:
     name: oven1
     file: package://pizzabot/objects/ovenV1.sdf
 
+
+- add_model:
+    name: serving
+    file: package://pizzabot/objects/serving_shelf.sdf
+
 - add_model:
     name: bowl0
     file: package://pizzabot/objects/evo_bowl.sdf
+    default_free_body_pose:
+        bowl:
+            translation: [-3, 0.5, 0.79]
 
 - add_model:
+    name: bowl1
+    file: package://pizzabot/objects/evo_bowl.sdf
+    default_free_body_pose:
+        bowl:
+            translation: [-3, 1, 0.79]
+- add_model:
+    name: bowl2
+    file: package://pizzabot/objects/evo_bowl.sdf
+    default_free_body_pose:
+        bowl:
+            translation: [-3, 1.5, 0.79]
+        
+- add_model:
     name: table0
-    file: package://pizzabot/objects/extra_heavy_duty_table_surface_only_collision.sdf
+    file: package://pizzabot/objects/table.sdf
 
 - add_model:
     name: table1
     file: package://pizzabot/objects/table.sdf
 
+- add_model:
+    name: camera0
+    file: package://manipulation/camera_box.sdf
 
-
-- add_weld:
-    parent: world
-    child: bin0::bin_base
-    X_PC:
-      translation: [-1, -0.5, 0.75]
-
-- add_weld:
-    parent: world
-    child: bowl0::bowl
-    X_PC:
-      translation: [-0.05, -0.5, 0.85]
-
+- add_frame:
+    name: camera_table_above
+    X_PF:
+        base_frame: table0::table
+        rotation: !Rpy { deg: [180.0, 0.0, 0.0]}
+        translation: [0., 0., 1.5]
 
 - add_weld:
-    parent: world
-    child: table0::link
-    X_PC:
-      translation: [-0.05, -0.5, -0.015]
-
+    parent: camera_table_above
+    child: camera0::base
+    
 - add_weld:
     parent: world
-    child: table1::table
+    child: table0::table
     X_PC:
       translation: [-1, -0.5, -0.015]
 
 - add_weld:
     parent: world
-    child: oven1::ovenV1
+    child: table1::table
     X_PC:
-      translation: [1, -0.5, -0.015]
+      translation: [-3, 1, -0.015]
       rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
 
 - add_weld:
     parent: world
-    child: pan1::panV1
+    child: oven1::ovenV1
     X_PC:
-      translation: [-0.05, -0.5, 0.75]
+      translation: [1, 1.5, -0.015]
+      rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
+
+- add_weld:
+    parent: world
+    child: serving::serving_shelf
+    X_PC:
+      translation: [0, 2.5, -0.015]
+      rotation: !Rpy { deg: [90.0, 0.0, 0.0 ]}
+
+- add_weld:
+    parent: mobile_iiwa::iiwa_link_7
+    child: gripper::body
+    X_PC:
+        translation: [0, 0, 0.09]
+        rotation: !Rpy { deg: [90, 0, 90]}
+
+model_drivers:
+    mobile_iiwa: !InverseDynamicsDriver {}

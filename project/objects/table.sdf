@@ -19,7 +19,7 @@
         <geometry>
           <mesh>
             <uri>table.obj</uri>
-            <scale>1.0 1.0 1.0</scale>
+            <scale>0.3 0.3 0.3</scale>
           </mesh>
         </geometry>
       </visual>
@@ -28,7 +28,7 @@
         <geometry>
           <mesh>
             <uri>table.obj</uri>
-            <scale>1.0 1.0 1.0</scale>
+            <scale>0.3 0.3 0.3</scale>
           </mesh>
         </geometry>
         <!-- The proximity properties immediately below enable the hydroelastic
