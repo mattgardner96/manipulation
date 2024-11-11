@@ -48,7 +48,7 @@ directives:
 
 - add_weld:
     parent: world
-    child: table1::link
+    child: table1::table
     X_PC:
       translation: [-1, -0.5, -0.015]
 
