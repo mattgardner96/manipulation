@@ -23,7 +23,8 @@ directives:
 
 - add_model:
     name: table1
-    file: package://pizzabot/objects/extra_heavy_duty_table_surface_only_collision.sdf
+    file: package://pizzabot/objects/table.sdf
+
 
 
 - add_weld:
