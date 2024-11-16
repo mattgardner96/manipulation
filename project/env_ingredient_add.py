@@ -7,7 +7,8 @@ bowl_1 = [-3, 1, 0.79]
 bowl_2 = [-3, 1.5, 0.79]
 pan_position = [-1, -0.5, 0.75]
 
-initial_scene = """
+
+robot_only = """
 directives:
 - add_model:
     name: mobile_iiwa
@@ -27,6 +28,15 @@ directives:
     name: gripper
     file: package://manipulation/schunk_wsg_50_welded_fingers.sdf
 
+- add_weld:
+    parent: mobile_iiwa::iiwa_link_7
+    child: gripper::body
+    X_PC:
+        translation: [0, 0, 0.09]
+        rotation: !Rpy { deg: [90, 0, 90]}
+"""
+
+initial_scene = """
 - add_model:
     name: pan1
     file: package://pizzabot/objects/panV1.sdf
@@ -115,12 +125,7 @@ directives:
       translation: [0, 2.5, -0.015]
       rotation: !Rpy { deg: [90.0, 0.0, 0.0 ]}
 
-- add_weld:
-    parent: mobile_iiwa::iiwa_link_7
-    child: gripper::body
-    X_PC:
-        translation: [0, 0, 0.09]
-        rotation: !Rpy { deg: [90, 0, 90]}
+
 """
 
 def add_mushroom(scenario_data):
@@ -173,10 +178,13 @@ def add_tomato(scenario_data):
 """
     return scenario_data
 
-def get_environment_set_up():
-    scenario_data = initial_scene
-    scenario_data = add_mushroom(scenario_data)
-    scenario_data = add_tomato(scenario_data)
+def get_environment_set_up(no_scene=False):
+
+    scenario_data = robot_only
+    if (no_scene == False):
+        scenario_data += initial_scene
+        scenario_data = add_mushroom(scenario_data)
+        scenario_data = add_tomato(scenario_data)
 
     scenario_data += """
 model_drivers:
