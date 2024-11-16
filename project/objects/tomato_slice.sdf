@@ -1,0 +1,45 @@
+<?xml version='1.0'?>
+<sdf xmlns:drake="http://drake.mit.edu" version="1.8">
+  <model name='tomato_slice'>
+    <link name='tomato_slice'>
+      <inertial>
+        <pose>0.006418648294586904 0.012940449949794996 0.015874999750000063 0 0 0</pose>
+        <mass>7.6946296897448905</mass>
+        <inertia>
+          <ixx>0.16257480385795609</ixx>
+          <ixy>0.009921216437424158</ixy>
+          <ixz>2.3984785900017012e-18</ixz>
+          <iyy>0.1920693651505392</iyy>
+          <iyz>2.043920885392754e-17</iyz>
+          <izz>0.353351391108943</izz>
+        </inertia>
+      </inertial>
+      <visual name='visual'>
+        <pose>0.0 0.0 0.0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>tomato_slice.obj</uri>
+            <scale>0.0008 0.0008 0.0008</scale>
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name='collision'>
+        <pose>0.0 0.0 0.0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>tomato_slice.obj</uri>
+            <scale>0.0008 0.0008 0.0008</scale>
+          </mesh>
+        </geometry>
+        <!-- The proximity properties immediately below enable the hydroelastic
+             contact model for this body. To use point contact instead, delete
+             or comment out the <drake:rigid_hydroelastic> element. -->
+        <drake:proximity_properties>
+          <drake:mu_dynamic>0.5</drake:mu_dynamic>
+          <drake:mu_static>0.5</drake:mu_static>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+    </link>
+  </model>
+</sdf>
