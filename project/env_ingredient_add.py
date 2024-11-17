@@ -128,6 +128,12 @@ initial_scene = """
 
 """
 
+model_drivers = """
+model_drivers:
+    mobile_iiwa: !InverseDynamicsDriver {}
+
+"""  
+
 def add_mushroom(scenario_data):
 
     mushroom_position = bowl_0 + np.array([-0.05,-0.05, 0.01])
@@ -178,7 +184,7 @@ def add_tomato(scenario_data):
 """
     return scenario_data
 
-def get_environment_set_up(no_scene=False):
+def get_environment_set_up(no_scene=False,include_driver=True):
 
     scenario_data = robot_only
     if (no_scene == False):
@@ -186,8 +192,7 @@ def get_environment_set_up(no_scene=False):
         scenario_data = add_mushroom(scenario_data)
         scenario_data = add_tomato(scenario_data)
 
-    scenario_data += """
-model_drivers:
-    mobile_iiwa: !InverseDynamicsDriver {}
-"""   
+    if include_driver:
+        scenario_data += model_drivers
+    
     return scenario_data
