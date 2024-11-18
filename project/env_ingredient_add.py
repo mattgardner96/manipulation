@@ -21,12 +21,12 @@ directives:
         iiwa_joint_5: [0]
         iiwa_joint_6: [ 1.6]
         iiwa_joint_7: [0]
-        iiwa_base_x: [-1]
-        iiwa_base_y: [1]
+        iiwa_base_x: [0]
+        iiwa_base_y: [0]
         iiwa_base_z: [0]
 - add_model:
     name: gripper
-    file: package://manipulation/schunk_wsg_50_welded_fingers.sdf
+    file: package://drake_models/wsg_50_description/sdf/schunk_wsg_50_with_tip.sdf
 
 - add_weld:
     parent: mobile_iiwa::iiwa_link_7
@@ -195,4 +195,44 @@ def get_environment_set_up(no_scene=False,include_driver=True):
     if include_driver:
         scenario_data += model_drivers
     
+    return scenario_data
+
+def pizza_state_environment_set_up():
+
+    scenario_data = robot_only
+    scenario_data += """
+
+- add_model:
+    name: pan1
+    file: package://pizzabot/objects/panV1.sdf
+    default_free_body_pose:
+        panV1:
+            translation: [-1, -0.5, 0.73]
+        
+- add_model:
+    name: table0
+    file: package://pizzabot/objects/table.sdf
+
+- add_model:
+    name: camera0
+    file: package://manipulation/camera_box.sdf
+
+- add_frame:
+    name: camera_table_above
+    X_PF:
+        base_frame: table0::table
+        rotation: !Rpy { deg: [180.0, 0.0, 0.0]}
+        translation: [0., 0., 1.5]
+
+- add_weld:
+    parent: camera_table_above
+    child: camera0::base
+    
+- add_weld:
+    parent: world
+    child: table0::table
+    X_PC:
+      translation: [-1, -0.5, -0.015]
+"""
+    scenario_data += model_drivers
     return scenario_data
