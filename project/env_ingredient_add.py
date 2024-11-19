@@ -233,6 +233,13 @@ def pizza_state_environment_set_up():
     child: table0::table
     X_PC:
       translation: [-1, -0.5, -0.015]
+      
+cameras:
+    camera0:
+        name: table_camera_0
+        depth: True
+        X_PB:
+            base_frame: camera_table_above
 """
     scenario_data += model_drivers
     return scenario_data
