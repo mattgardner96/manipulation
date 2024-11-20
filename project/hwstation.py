@@ -325,12 +325,13 @@ if __name__=="__main__":
     # at present, trajectory blank doesn't work
     diagram,sim = init_diagram(meshcat,scenario)
     context = diagram.CreateDefaultContext()
-    traj = create_small_trajectory(diagram)
+    traj = create_small_trajectory(diagram,context)
 
     meshcat.Delete()
     diagram,sim = init_diagram(meshcat,scenario,traj)
 
+
     create_small_trajectory(diagram)
-    run_simulation(meshcat,sim)
+    run_simulation(meshcat,sim,20)
 
     # print_diagram(diagram)
