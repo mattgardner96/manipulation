@@ -30,6 +30,10 @@ from pydrake.all import (
     LinearConstraint,
 )
 
+from IPython.display import display, SVG
+import pydot
+import matplotlib.pyplot as plt
+
 from pydrake.geometry import StartMeshcat
 from pydrake.systems.analysis import Simulator
 from pydrake.visualization import ModelVisualizer
@@ -212,7 +216,13 @@ def init_diagram(meshcat, scenario, traj=PiecewisePose()):
 
 
 # run simulation
-def run_simulation(meshcat, simulator, start_time):
+def run_simulation(meshcat, simulator, start_time=0.1):
+    """
+    starts a simulation.
+    meshcat: sim environment
+    simulator: simulator provided from the needed diagram
+    start_time: time (s)
+    """
     # context = self.simulator.get_mutable_context()
     # x0 = self.station.GetOutputPort("mobile_iiwa.state_estimated").Eval(context)
     # self.station.GetInputPort("mobile_iiwa.desired_state").FixValue(context, x0)
@@ -220,6 +230,78 @@ def run_simulation(meshcat, simulator, start_time):
     simulator.AdvanceTo(start_time if running_as_notebook else 0.1)
     meshcat.PublishRecording()
 
+
+def compose_circular_key_frames(thetas, X_WCenter, radius):
+    """
+    returns: a list of RigidTransforms
+    """
+    # this is an template, replace your code below
+    key_frame_poses_in_world = []
+    for theta in thetas:
+        position = X_WCenter.translation() + np.array([
+            radius * np.cos(theta),
+            radius * np.sin(theta),
+            0.0  # z-coordinate stays constant for a horizontal trajectory
+        ])
+        
+        # Use the same rotation matrix for all keyframes
+        rotation_matrix = X_WCenter.rotation()
+        this_pose = RigidTransform(rotation_matrix, position)
+        key_frame_poses_in_world.append(this_pose)
+        # print(f"Key frame pose at theta {theta}: Position = {position}, Rotation = {rotation_matrix}")
+
+    return key_frame_poses_in_world
+
+
+def get_X_WG(diagram, context=None):
+    if not context:
+        context = diagram.CreateDefaultContext()
+    plant = diagram.GetSubsystemByName("station").GetSubsystemByName("plant")
+    plant_context = plant.GetMyMutableContextFromRoot(context)
+
+    gripper_frame = plant.GetFrameByName("body")
+    world_frame = plant.world_frame()
+
+    X_WG = plant.CalcRelativeTransform(
+        plant_context, frame_A=world_frame, frame_B=gripper_frame
+    )
+    return X_WG
+
+
+def create_small_trajectory(diagram,context=None):
+    # define center and radius
+    radius = 0.1
+    p0 = [0.45, 0.0, 0.4]
+    p_base = [0.0, 0.0, 0.0]
+    R0 = RotationMatrix(np.array([[0, 1, 0], [0, 0, -1], [-1, 0, 0]]).T)
+    X_WCenter = RigidTransform(R0, p0)
+
+    num_key_frames = 10
+    """
+    you may use different thetas as long as your trajectory starts
+    from the Start Frame above and your rotation is positive
+    in the world frame about +z axis
+    thetas = np.linspace(0, 2*np.pi, num_key_frames)
+    """
+    thetas = np.linspace(0, 2 * np.pi, num_key_frames)
+
+    key_frame_poses = compose_circular_key_frames(thetas, X_WCenter, radius)
+    # print("key_frame_poses: ", key_frame_poses)
+    # print("length of key_frame_poses: ", len(key_frame_poses))
+
+    X_WGinit = get_X_WG(diagram,context=context)
+    # print("X_WGinit: ", X_WGinit)
+
+    total_time = 20.0
+    start_time = total_time 
+    key_frame_poses = [X_WGinit] + compose_circular_key_frames(thetas, X_WCenter, radius)
+
+    for i, frame in enumerate(key_frame_poses):
+        AddMeshcatTriad(meshcat, X_PT=frame, path="frame"+str(i))
+
+    times = np.linspace(0, total_time, num_key_frames + 1)
+
+    return PiecewisePose.MakeLinear(times, key_frame_poses)
 
 
 if __name__=="__main__":
@@ -240,6 +322,15 @@ if __name__=="__main__":
     scenario = LoadScenario(data=get_scene())
     meshcat = StartMeshcat()
 
+    # at present, trajectory blank doesn't work
     diagram,sim = init_diagram(meshcat,scenario)
+    context = diagram.CreateDefaultContext()
+    traj = create_small_trajectory(diagram)
 
-    print_diagram(diagram)
+    meshcat.Delete()
+    diagram,sim = init_diagram(meshcat,scenario,traj)
+
+    create_small_trajectory(diagram)
+    run_simulation(meshcat,sim)
+
+    # print_diagram(diagram)
