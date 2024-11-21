@@ -1,0 +1,26 @@
+{
+    "tests": [
+        {
+            "name": "Test approximated gradient function",
+            "score": 2,
+            "max_score": 2,
+            "status": "passed"
+        },
+        {
+            "name": "Test approximated gradient with baseline function",
+            "score": 1,
+            "max_score": 1,
+            "status": "passed"
+        },
+        {
+            "name": "Test exact gradient function",
+            "score": 0.0,
+            "max_score": 2,
+            "status": "failed",
+            "output": "Test Failed: 3.5291964717463915 not less than or equal to 0.01 : You have wrong exact gradients.\n"
+        }
+    ],
+    "leaderboard": [],
+    "execution_time": "0.00",
+    "score": 3.0
+}
