@@ -1,26 +1,27 @@
 {
     "tests": [
         {
-            "name": "Test approximated gradient function",
+            "name": "Testing advantage function",
+            "score": 0.0,
+            "max_score": 4,
+            "status": "failed",
+            "output": "Test Failed: 'compute_advantages'\n"
+        },
+        {
+            "name": "Testing the policy loss",
             "score": 2,
             "max_score": 2,
             "status": "passed"
         },
         {
-            "name": "Test approximated gradient with baseline function",
-            "score": 1,
-            "max_score": 1,
-            "status": "passed"
-        },
-        {
-            "name": "Test exact gradient function",
+            "name": "Testing the value loss",
             "score": 0.0,
             "max_score": 2,
             "status": "failed",
-            "output": "Test Failed: 3.5291964717463915 not less than or equal to 0.01 : You have wrong exact gradients.\n"
+            "output": "Test Failed: mat1 and mat2 shapes cannot be multiplied (1x3 and 2x2)\n"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.00",
-    "score": 3.0
+    "execution_time": "0.17",
+    "score": 2.0
 }
