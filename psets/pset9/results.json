@@ -2,10 +2,10 @@
     "tests": [
         {
             "name": "Testing advantage function",
-            "score": 0.0,
+            "score": 4,
             "max_score": 4,
-            "status": "failed",
-            "output": "Test Failed: 'compute_advantages'\n"
+            "status": "passed",
+            "output": "tensor(2.3842e-07)\n"
         },
         {
             "name": "Testing the policy loss",
@@ -15,13 +15,12 @@
         },
         {
             "name": "Testing the value loss",
-            "score": 0.0,
+            "score": 2,
             "max_score": 2,
-            "status": "failed",
-            "output": "Test Failed: mat1 and mat2 shapes cannot be multiplied (1x3 and 2x2)\n"
+            "status": "passed"
         }
     ],
     "leaderboard": [],
-    "execution_time": "0.17",
-    "score": 2.0
+    "execution_time": "0.02",
+    "score": 8
 }
