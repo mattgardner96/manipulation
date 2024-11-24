@@ -268,7 +268,7 @@ def get_X_WG(diagram, context=None):
     return X_WG
 
 
-def create_small_trajectory(diagram,context=None):
+def create_small_trajectory(diagram,meshcat,context=None):
     # define center and radius
     radius = 0.1
     p0 = [0.45, 0.0, 0.4]
