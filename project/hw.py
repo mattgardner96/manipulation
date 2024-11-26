@@ -127,7 +127,6 @@ def AddMobileIiwaDifferentialIK(
     )
     params.set_joint_centering_gain(10 * np.eye(10))
     
-            
     differential_ik = builder.AddNamedSystem(
         "diff_ik_integrator",
         DifferentialInverseKinematicsIntegrator(
@@ -139,6 +138,34 @@ def AddMobileIiwaDifferentialIK(
         )
     )
     return differential_ik
+
+
+def diff_ik_solver(J_G, V_G_desired, q_now, v_now, p_now):
+    num_positions = 10
+    prog = MathematicalProgram()
+    v = prog.NewContinuousVariables(10, "joint_velocities")
+    v_max = 3.0  # do not modify
+    h = 4e-3  # do not modify
+    lower_bound = np.array([-0.3, -1.0, 0.0])  # do not modify
+    upper_bound = np.array([0.3, 1.0, 1.0])  # do not modify
+
+    p_next = (J_G @ v * h)[3:] + p_now
+
+    # Fill in your code here.
+    prog.AddCost((J_G @ v - V_G_desired).dot(J_G @ v - V_G_desired))
+    prog.AddBoundingBoxConstraint(-v_max, v_max, v)
+    prog.AddConstraint(le(lower_bound, p_next))
+    prog.AddConstraint(ge(upper_bound, p_next))
+    # prog.AddBoundingBoxConstraint(lower_bound, upper_bound, p_next)
+    
+    solver = SnoptSolver()
+    result = solver.Solve(prog)
+
+    if not (result.is_success()):
+        raise ValueError("Could not find the optimal solution.")
+
+    v_solution = result.GetSolution(v)
+    return v_solution
 
 def print_diagram(diagram, output_file="diagram.png"):
         # Visualize and save the diagram as a PNG
@@ -307,18 +334,19 @@ def create_small_trajectory(diagram,meshcat,context=None):
 
 def fix_base_pos(diff_ik_params: DifferentialInverseKinematicsParameters,fix_base):
     # example usage: set_base_vels(bot_ik_params,np.zeros((2,3))) 
+    tolerance = 1e-2
     new_joint_pos = np.zeros((2,10))
     for i,axis in enumerate(fix_base):
         if axis:
             # if fixed, we set the position to existing
-            new_joint_pos[:,i+7] = diff_ik_params.get_nominal_joint_position()[7+i]
+            new_joint_pos[:,i] = diff_ik_params.get_nominal_joint_position()[i]
         else:
             # if free, we set to infinity
-            new_joint_pos[:, i+7] = np.array([[-np.inf],[np.inf]]).T
-            print(new_joint_pos[:,i+7])
+            new_joint_pos[:, i] = np.array([[-np.inf],[np.inf]]).T
+            print(new_joint_pos[:,i])
     # new_joint_vels[:,0:7] = curr_joint_vels(diff_ik_params)[:,0:7]
-    new_joint_pos[:,0:7] = np.array([[-np.inf],[np.inf]]) * np.ones((2,7))
-    diff_ik_params.set_joint_position_limits(tuple([new_joint_pos[0], new_joint_pos[1]]))
+    new_joint_pos[:,3:10] = np.array([[-np.inf],[np.inf]]) * np.ones((2,7))
+    diff_ik_params.set_joint_position_limits(tuple([new_joint_pos[0]-tolerance, new_joint_pos[1]+tolerance]))
 
 
 if __name__=="__main__":
