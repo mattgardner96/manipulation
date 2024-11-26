@@ -304,6 +304,23 @@ def create_small_trajectory(diagram,meshcat,context=None):
     return PiecewisePose.MakeLinear(times, key_frame_poses)
 
 
+
+def fix_base_pos(diff_ik_params: DifferentialInverseKinematicsParameters,fix_base):
+    # example usage: set_base_vels(bot_ik_params,np.zeros((2,3))) 
+    new_joint_pos = np.zeros((2,10))
+    for i,axis in enumerate(fix_base):
+        if axis:
+            # if fixed, we set the position to existing
+            new_joint_pos[:,i+7] = diff_ik_params.get_nominal_joint_position()[7+i]
+        else:
+            # if free, we set to infinity
+            new_joint_pos[:, i+7] = np.array([[-np.inf],[np.inf]]).T
+            print(new_joint_pos[:,i+7])
+    # new_joint_vels[:,0:7] = curr_joint_vels(diff_ik_params)[:,0:7]
+    new_joint_pos[:,0:7] = np.array([[-np.inf],[np.inf]]) * np.ones((2,7))
+    diff_ik_params.set_joint_position_limits(tuple([new_joint_pos[0], new_joint_pos[1]]))
+
+
 if __name__=="__main__":
     print("hello")
     
