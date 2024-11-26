@@ -1,7 +1,7 @@
 import numpy as np
 
-num_mushrooms = 30
-num_tomatoes = 30
+NUM_MUSHROOMS = 0
+NUM_TOMATOES = 0
 bowl_0 = [-3, 0.5, 0.79]
 bowl_1 = [-3, 1, 0.79]
 bowl_2 = [-3, 1.5, 0.79]
@@ -42,7 +42,7 @@ initial_scene = """
     file: package://pizzabot/objects/panV1.sdf
     default_free_body_pose:
         panV1:
-            translation: [-1, -0.5, 0.73]
+            translation: """+str(pan_position)+"""
 
 - add_model:
     name: oven1
@@ -57,7 +57,7 @@ initial_scene = """
     file: package://pizzabot/objects/mixing_bowl.sdf
     default_free_body_pose:
         mixing_bowl_body_link:
-            translation: [-3, 0.5, 0.73]
+            translation: """+str(bowl_0)+"""
             rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
 
 - add_model:
@@ -65,14 +65,14 @@ initial_scene = """
     file: package://pizzabot/objects/mixing_bowl.sdf
     default_free_body_pose:
         mixing_bowl_body_link:
-            translation: [-3, 1, 0.73]
+            translation: """+str(bowl_1)+"""
             rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
 - add_model:
     name: bowl2
     file: package://pizzabot/objects/mixing_bowl.sdf
     default_free_body_pose:
         mixing_bowl_body_link:
-            translation: [-3, 1.5, 0.73]
+            translation: """+str(bowl_2)+"""
             rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
         
 - add_model:
@@ -141,7 +141,7 @@ def add_mushroom(scenario_data):
 
     #to fix add rand number to sim to populate mushroom instances not on top of each other
 
-    for i in range(num_mushrooms):
+    for i in range(NUM_MUSHROOMS):
         if i%3 == 0:
             mushroom_instance = mushroom_instance + np.array([0, 0, 0.01]) 
         elif i%2 == 0: 
@@ -166,7 +166,7 @@ def add_tomato(scenario_data):
 
     #to fix add rand number to sim to populate mushroom instances not on top of each other
 
-    for j in range(num_tomatoes):
+    for j in range(NUM_TOMATOES):
         if j%3 == 0:
             tomato_instance = tomato_instance + np.array([0, 0, 0.01]) 
         elif j%2 == 0: 
