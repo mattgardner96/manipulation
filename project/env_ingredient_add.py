@@ -1,7 +1,7 @@
 import numpy as np
 
-NUM_MUSHROOMS = 0
-NUM_TOMATOES = 0
+NUM_MUSHROOMS = 30
+NUM_TOMATOES = 30
 bowl_0 = [-3, 0.5, 0.79]
 bowl_1 = [-3, 1, 0.79]
 bowl_2 = [-3, 1.5, 0.79]
@@ -134,6 +134,13 @@ model_drivers:
 
 """  
 
+plant_config = """
+plant_config:
+    time_step: 1e-2
+    contact_model: "hydroelastic_with_fallback"
+    discrete_contact_approximation: "sap"
+"""
+
 def add_mushroom(scenario_data):
 
     mushroom_position = bowl_0 + np.array([-0.05,-0.05, 0.01])
@@ -194,6 +201,8 @@ def get_environment_set_up(no_scene=False,include_driver=True):
 
     if include_driver:
         scenario_data += model_drivers
+    
+    scenario_data += plant_config
     
     return scenario_data
 

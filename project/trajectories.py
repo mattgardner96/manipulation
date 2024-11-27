@@ -1,3 +1,13 @@
+import hw
+import numpy as np
+import env_ingredient_add as env
+from pydrake.trajectories import PiecewisePose
+from pydrake.systems.framework import Diagram, Context
+from pydrake.math import RigidTransform, RotationMatrix
+from dataclasses import dataclass
+from pydrake.all import PiecewisePolynomial, PiecewisePose, Trajectory
+
+
 def traj_linear_move_to_bowl_0(
         diagram,
         context=None,
