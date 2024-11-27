@@ -56,6 +56,8 @@ class PoseTrajectorySource(LeafSystem):
     """
     # pose_trajectory: PiecewisePose = PiecewisePose()
 
+    # need a way to set a new trajectory within this method?
+
     def __init__(self, pose_trajectory):
         LeafSystem.__init__(self)
         self._pose_trajectory = pose_trajectory
