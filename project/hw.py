@@ -297,7 +297,7 @@ def get_X_WG(diagram, context=None):
     return X_WG
 
 
-def create_small_trajectory(diagram,meshcat,context=None):
+def create_painter_trajectory(diagram,meshcat=None,context=None):
     # define center and radius
     radius = 0.1
     p0 = [0.45, 0.0, 0.4]
@@ -325,8 +325,9 @@ def create_small_trajectory(diagram,meshcat,context=None):
     start_time = total_time 
     key_frame_poses = [X_WGinit] + compose_circular_key_frames(thetas, X_WCenter, radius)
 
-    for i, frame in enumerate(key_frame_poses):
-        AddMeshcatTriad(meshcat, X_PT=frame, path="frame"+str(i))
+    if meshcat is not None:
+        for i, frame in enumerate(key_frame_poses):
+            AddMeshcatTriad(meshcat, X_PT=frame, path="frame"+str(i))
 
     times = np.linspace(0, total_time, num_key_frames + 1)
 
