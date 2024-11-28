@@ -137,7 +137,7 @@ model_drivers:
 plant_config = """
 plant_config:
     time_step: 1e-2
-    contact_model: "hydroelastic_with_fallback"
+    contact_model: "hydroelastic_with_a_fallback"
     discrete_contact_approximation: "sap"
 """
 
