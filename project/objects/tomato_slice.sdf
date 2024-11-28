@@ -32,10 +32,9 @@
           </cylinder>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic>
-          <drake:mesh_resolution_hint>1.0e-4</drake:mesh_resolution_hint>
+          <drake:compliant_hydroelastic/>
+          <drake:mesh_resolution_hint>1.0e-2</drake:mesh_resolution_hint>
           <drake:hydroelastic_modulus>1.0e5</drake:hydroelastic_modulus>
-          </drake:compliant_hydroelastic>
         </drake:proximity_properties>
       </collision>
     </link>
