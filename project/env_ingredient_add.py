@@ -137,7 +137,7 @@ model_drivers:
 plant_config = """
 plant_config:
     time_step: 1e-2
-    contact_model: "hydroelastic_with_a_fallback"
+    contact_model: "hydroelastic_with_fallback"
     discrete_contact_approximation: "sap"
 """
 
@@ -194,7 +194,7 @@ def add_tomato(scenario_data):
 def get_environment_set_up(no_scene=False,include_driver=True):
 
     scenario_data = robot_only
-    if (no_scene == False):
+    if (no_scene is False):
         scenario_data += initial_scene
         scenario_data = add_mushroom(scenario_data)
         scenario_data = add_tomato(scenario_data)
