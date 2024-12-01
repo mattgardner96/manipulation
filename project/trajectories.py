@@ -6,6 +6,7 @@ from pydrake.systems.framework import Diagram, Context
 from pydrake.math import RigidTransform, RotationMatrix
 from dataclasses import dataclass
 from pydrake.all import PiecewisePolynomial, PiecewisePose, Trajectory
+from hw import PoseTrajectorySource
 
 
 def traj_linear_move_to_bowl_0(
