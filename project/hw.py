@@ -50,30 +50,6 @@ import trajectories
 from trajectories import PizzaPlanner, PizzaRobotState
 
 
-
-class PoseTrajectorySource(LeafSystem):
-    """
-    returns desired list of poses of dimension 20: 10 positions, 10 velocities
-    (optional) pose_trajectory: trajectory to follow. if context does not already exist, pass it in from the plant.
-    """
-    # pose_trajectory: PiecewisePose = PiecewisePose()
-
-    # need a way to set a new trajectory within this method?
-
-    def __init__(self, pose_trajectory):
-        LeafSystem.__init__(self)
-        self._pose_trajectory = pose_trajectory
-        self.DeclareAbstractOutputPort(
-            "pose", lambda: AbstractValue.Make(RigidTransform()), self.CalcPose
-        )
-
-    def CalcPose(self, context, output):
-        output.set_value(self._pose_trajectory.GetPose(context.get_time()))
-        pose = self._pose_trajectory.GetPose(context.get_time())
-        # print(f"Pose dimensions: {pose.GetAsVector().size()}")
-        output.set_value(pose)
-
-
 def CreateStateMachine(
     builder: DiagramBuilder, station, frame: Frame = None
 ):
@@ -193,6 +169,7 @@ def print_diagram(diagram, output_file="diagram.png"):
 
 
 def init_builder(meshcat, scenario, traj=PiecewisePose()):
+    from trajectories import PoseTrajectorySource
     
     num_positions = 10
     time_step = 1e-3
