@@ -5,8 +5,25 @@ from pydrake.trajectories import PiecewisePose
 from pydrake.systems.framework import Diagram, Context
 from pydrake.math import RigidTransform, RotationMatrix
 from dataclasses import dataclass
-from pydrake.all import PiecewisePolynomial, PiecewisePose, Trajectory
+from pydrake.all import PiecewisePolynomial, PiecewisePose, Trajectory, LeafSystem
 from hw import PoseTrajectorySource
+from enum import Enum
+from pydrake.all import (
+    AbstractValue,
+    BasicVector,
+    Context,
+    Diagram,
+    DiagramBuilder,
+    DiscreteValues,
+    InputPortIndex,
+    LeafSystem,
+    MultibodyPlant,
+    PathParameterizedTrajectory,
+    PiecewisePose,
+    PortSwitch,
+    RigidTransform,
+    State,
+)
 
 
 def traj_linear_move_to_bowl_0(
@@ -47,3 +64,234 @@ def traj_linear_move_to_bowl_0(
         [X_WGinit, int_1, int_2, goal_pose])
 
     return poses
+
+
+
+@dataclass
+class TrajectoryWithTimingInformation:
+    """
+    Contains a Drake Trajectory and an associated start time which is relative to
+    the simulation start time.
+    """
+
+    trajectory: Trajectory = PiecewisePolynomial()
+    start_time_s: float = np.nan
+
+@dataclass
+class PiecewisePoseWithTimingInformation:
+    """
+    Contains a Drake PiecewisePose trajectory and an associated start time which is
+    relative to the simulation start time.
+    """
+
+    trajectory: PiecewisePose = PiecewisePose()
+    start_time_s: float = np.nan
+
+@dataclass
+class OpenLoopPlanarPushingPlanarTimingInformation:
+    """
+    Timing information for OpenLoopPlanarPushingPlanar. All times are relative to the
+    simulation start and in seconds. All values are NaN by default.
+    """
+
+    start_move_to_start: float = np.nan
+    """Start time of the move to pushing start trajectory."""
+    end_move_to_start: float = np.nan
+    """Finish time of the move to pushing start trajeectory."""
+    start_pushing: float = np.nan
+    """Start time of the pushing trajectory."""
+    end_pushing: float = np.nan
+    """End time of the pushing trajectory."""
+
+
+class PizzaRobotState(Enum):
+    """FSM state enumeration"""
+
+    START = 0
+    PLAN_IIWA_PAINTER = 1
+    EXECUTE_IIWA_PAINTER = 2
+    FINISHED = 3
+
+
+class PizzaPlanner(LeafSystem):
+    def __init__(
+            self,
+            num_joint_positions: int,
+            initial_delay_s: int
+        ):
+        """
+        Args: 
+            (blank for now)
+
+        Adapted from OpenLoopPlanarPushingPlanner (github user nepfaff/iiwa_setup).
+        """
+        super().__init__()
+
+        self._is_finished = False # encodes that we've reached goal state
+
+        # internal state
+        self._fsm_state_idx = int(
+            self.DeclareAbstractState(
+                AbstractValue.Make(PizzaRobotState.START) # init to start state
+            )
+        )
+        """current FSM state"""
+
+        self._timing_information_idx = int(
+            self.DeclareAbstractState(
+                AbstractValue.Make(
+                    OpenLoopPlanarPushingPlanarTimingInformation(
+                        start_move_to_start=initial_delay_s
+                    )
+                )
+            )
+        )
+        """Class for writing and reading planed timings."""
+
+        self._current_iiwa_positions_idx = int(
+            self.DeclareDiscreteState(num_joint_positions)
+        )
+        """The current iiwa positions. These are used to command the robot to stay idle."""
+
+        self._current_pose_trajectory_idx = int(
+            self.DeclareAbstractState(
+                AbstractValue.Make(PiecewisePoseWithTimingInformation())
+            )
+        )
+        """The current pose trajectory."""
+
+
+        # input ports
+        self._iiwa_state_estimated_input_port = self.DeclareVectorInputPort(
+            "mobile_iiwa.estimated_state", num_joint_positions*2 # positions and velocities
+        )
+
+        # output ports
+        # self.DeclareAbstractOutputPort(
+        #     "control_mode",
+        #     lambda: AbstractValue.Make(InputPortIndex(0)),
+        #     self._calc_control_mode,
+        # )
+        # self.DeclareAbstractOutputPort(
+        #     "reset_diff_ik",
+        #     lambda: AbstractValue.Make(False),
+        #     self._calc_diff_ik_reset,
+        # )
+        # self.DeclareAbstractOutputPort(
+        #     "joint_position_trajectory",
+        #     lambda: AbstractValue.Make(TrajectoryWithTimingInformation()),
+        #     self._get_current_joint_position_trajectory,
+        # )
+        # self.DeclareAbstractOutputPort(
+        #     "pose_trajectory",
+        #     lambda: AbstractValue.Make(PiecewisePoseWithTimingInformation()),
+        #     self._get_current_pose_trajectory,
+        # )
+        self.DeclareVectorOutputPort(
+            "current_iiwa_positions",
+            num_joint_positions,
+            self._get_current_iiwa_positions,
+        )
+
+        self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
+       
+        # Run FSM logic before every trajectory-advancing step
+        self.DeclarePerStepUnrestrictedUpdateEvent(self._run_fsm_logic)
+
+
+    def _get_current_iiwa_positions(
+        self, context: Context, output: BasicVector
+    ) -> None:
+        positions = context.get_discrete_state(
+            self._current_iiwa_positions_idx
+        ).get_value()
+        output.set_value(positions)
+
+
+
+    def _initialize_discrete_state(
+        self, context: Context, discrete_values: DiscreteValues
+    ) -> None:
+        # Initialize the current iiwa positions
+        discrete_values.set_value(
+            self._current_iiwa_positions_idx,
+            self._iiwa_state_estimated_input_port.Eval(context)[:10], # pick off positions
+        )
+
+    # plan move to home location
+    def _plan_iiwa_painter(self,context: Context) -> PathParameterizedTrajectory:
+        pass
+
+    # iiwa painter trajectory
+    def _execute_iiwa_painter(self, context: Context):
+        pass
+
+
+
+    def _run_fsm_logic(self, context: Context, state: State) -> None:
+        """FSM state transition logic."""
+        current_time = context.get_time()
+        timing_information: OpenLoopPlanarPushingPlanarTimingInformation = (
+            context.get_mutable_abstract_state(self._timing_information_idx).get_value()
+        )
+
+        mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
+        fsm_state_value: PizzaRobotState = context.get_abstract_state(
+            self._fsm_state_idx
+        ).get_value()
+
+        if fsm_state_value == PizzaRobotState.START:
+            print("Current state: START")
+
+            
+
+            # for now, this state just inits the robot position at the start time.
+            
+            
+
+
+            # q_traj = self._plan_move_to_start(context)
+            # state.get_mutable_abstract_state(self._current_joint_traj_idx).set_value(
+            #     TrajectoryWithTimingInformation(
+            #         trajectory=q_traj,
+            #         start_time_s=timing_information.start_move_to_start,
+            #     )
+            # )
+            # timing_information.end_move_to_start = (
+            #     timing_information.start_move_to_start + q_traj.end_time()
+            # )
+            # state.get_mutable_abstract_state(self._timing_information_idx).set_value(
+            #     timing_information
+            # )
+
+            print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
+            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+
+        elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
+            print("Current state: PLAN_IIWA_PAINTER")
+
+            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
+            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+
+        elif fsm_state_value == PizzaRobotState.EXECUTE_IIWA_PAINTER:
+            # this is where we would actually execute the trajectory
+
+            # traj0 = hw.create_painter_trajectory(diagram,meshcat,context)
+
+            print("Transitioning to FINISHED FSM state")
+            mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+
+
+        elif fsm_state_value == PizzaRobotState.FINISHED:
+
+            self._is_finished = True
+
+        else:
+            print(f"Invalid FSM state: {fsm_state_value}")
+            exit(1)
+
+    def is_finished(self) -> bool:
+        """Returns True if the task has been completed and False otherwise."""
+        return self._is_finished
+
+
