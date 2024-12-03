@@ -46,6 +46,8 @@ from manipulation.meshcat_utils import AddMeshcatTriad
 sys.path.append('.')
 import env_ingredient_add
 importlib.reload(env_ingredient_add)
+import trajectories
+from trajectories import PizzaPlanner, PizzaRobotState
 
 
 
@@ -70,6 +72,18 @@ class PoseTrajectorySource(LeafSystem):
         pose = self._pose_trajectory.GetPose(context.get_time())
         # print(f"Pose dimensions: {pose.GetAsVector().size()}")
         output.set_value(pose)
+
+
+def CreateStateMachine(
+    builder: DiagramBuilder, station, frame: Frame = None
+):
+    planner = PizzaPlanner(
+        num_joint_positions=10,
+        initial_delay_s=1
+    )
+    state_machine = builder.AddNamedSystem("planner",planner)
+    
+    return state_machine
 
 
 def CreateIiwaControllerPlant():
@@ -215,19 +229,29 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         controller.get_input_port(0),
     )
 
-    builder.Connect(
-        station.GetOutputPort("mobile_iiwa.state_estimated"),
-        controller.GetInputPort("robot_state"),
-    )
+    # builder.Connect(
+    #     station.GetOutputPort("mobile_iiwa.state_estimated"),
+    #     controller.GetInputPort("robot_state"),
+    # )
 
-    builder.Connect(
-        controller.get_output_port(),
-        pos_to_state_sys.get_input_port(),
-    )
+    # builder.Connect(
+    #     controller.get_output_port(),
+    #     pos_to_state_sys.get_input_port(),
+    # )
 
     builder.Connect(
         pos_to_state_sys.get_output_port(),
         station.GetInputPort("mobile_iiwa.desired_state")
+    )
+
+    state_machine = CreateStateMachine(builder,station)
+    builder.Connect(
+        state_machine.get_output_port(0),
+        pos_to_state_sys.get_input_port()
+    )
+    builder.Connect(
+        station.GetOutputPort("mobile_iiwa.state_estimated"),
+        state_machine.get_input_port(0)
     )
 
     return builder, station
