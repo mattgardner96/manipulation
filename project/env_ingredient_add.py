@@ -1,11 +1,12 @@
 import numpy as np
 
-NUM_MUSHROOMS = 30
-NUM_TOMATOES = 30
+NUM_MUSHROOMS = 20
+NUM_TOMATOES = 20
 bowl_0 = [-3, 0.5, 0.79]
 bowl_1 = [-3, 1, 0.79]
 bowl_2 = [-3, 1.5, 0.79]
 pan_position = [-1, -0.5, 0.75]
+
 
 
 robot_only = """
@@ -21,8 +22,8 @@ directives:
         iiwa_joint_5: [0]
         iiwa_joint_6: [ 1.6]
         iiwa_joint_7: [0]
-        iiwa_base_x: [0]
-        iiwa_base_y: [0]
+        iiwa_base_x: [-1]
+        iiwa_base_y: [1]
         iiwa_base_z: [0]
 - add_model:
     name: gripper
@@ -143,18 +144,24 @@ plant_config:
 
 def add_mushroom(scenario_data):
 
-    mushroom_position = bowl_0 + np.array([-0.05,-0.05, 0.01])
+    mushroom_position = bowl_0 + np.array([0,0, 0.02])
     mushroom_instance = mushroom_position
+    
+    
 
     #to fix add rand number to sim to populate mushroom instances not on top of each other
 
     for i in range(NUM_MUSHROOMS):
-        if i%3 == 0:
-            mushroom_instance = mushroom_instance + np.array([0, 0, 0.01]) 
-        elif i%2 == 0: 
-            mushroom_instance = mushroom_instance + np.array([0, 0.01, 0.0]) 
-        else:
-            mushroom_instance = mushroom_instance + np.array([0.01, 0.0, 0.0])
+        mushy = i%4
+        if mushy == 0:
+            mushroom_instance2 = mushroom_instance + np.array([0.04, 0, 0.0]) 
+        elif mushy == 1: 
+            mushroom_instance2 = mushroom_instance + np.array([0, 0.04, 0.0]) 
+        elif mushy == 2: 
+            mushroom_instance2 = mushroom_instance + np.array([-0.08, -0.08, 0.0])
+        elif mushy == 3: 
+            mushroom_instance = mushroom_instance + np.array([0, 0.0, 0.04])
+            mushroom_instance2 = mushroom_instance
         scenario_data += """
 - add_model:
     name: mushroom_"""+str(i)+"""
@@ -168,25 +175,30 @@ def add_mushroom(scenario_data):
 
 def add_tomato(scenario_data):
 
-    tomato_position = bowl_1 + np.array([-0.05,-0.05, 0])
+    tomato_position = bowl_1 + np.array([0,0, 0.05])
     tomato_instance = tomato_position
+    
 
     #to fix add rand number to sim to populate mushroom instances not on top of each other
 
     for j in range(NUM_TOMATOES):
-        if j%3 == 0:
-            tomato_instance = tomato_instance + np.array([0, 0, 0.01]) 
-        elif j%2 == 0: 
-            tomato_instance = tomato_instance + np.array([0, 0.01, 0.0]) 
-        else:
-            tomato_instance = tomato_instance + np.array([0.01, 0.0, 0.0])
+        number = j%4
+        if number == 0:
+            tomato_instance2 = tomato_instance + np.array([0.03, 0, 0]) 
+        elif number == 1: 
+            tomato_instance2 = tomato_instance + np.array([0, 0.03, 0.0]) 
+        elif number ==2:
+            tomato_instance2 = tomato_instance + np.array([-0.06, -0.06, 0.0])
+        elif number ==3:
+            tomato_instance = tomato_instance + np.array([0.0, 0.0, 0.03])
+            tomato_instance2 = tomato_instance
         scenario_data += """
 - add_model:
     name: tomato_"""+str(j)+"""
     file: package://pizzabot/objects/tomato_slice.sdf
     default_free_body_pose:
         tomato_slice:
-            translation: ["""+str(tomato_instance[0])+""", """+str(tomato_instance[1])+""", """+str(tomato_instance[2])+"""]
+            translation: ["""+str(tomato_instance2[0])+""", """+str(tomato_instance2[1])+""", """+str(tomato_instance2[2])+"""]
             
 """
     return scenario_data

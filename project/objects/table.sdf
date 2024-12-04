@@ -24,20 +24,16 @@
         </geometry>
       </visual>
       <collision name='collision'>
-        <pose>0.0 0.0 0.0 0 0 0</pose>
+        <pose>0.0 0.0 0.38 0 0 0</pose>
         <geometry>
-          <mesh>
-            <uri>table.obj</uri>
-            <scale>0.3 0.3 0.3</scale>
-          </mesh>
+          <box>
+            <size>1.7 0.9 0.72</size>
+          </box>
         </geometry>
-        <!-- The proximity properties immediately below enable the hydroelastic
-             contact model for this body. To use point contact instead, delete
-             or comment out the <drake:rigid_hydroelastic> element. -->
         <drake:proximity_properties>
-          <drake:mu_dynamic>0.5</drake:mu_dynamic>
-          <drake:mu_static>0.5</drake:mu_static>
-          <drake:rigid_hydroelastic/>
+          <drake:compliant_hydroelastic/>
+          <drake:mesh_resolution_hint>1.0e-2</drake:mesh_resolution_hint>
+          <drake:hydroelastic_modulus>1.0e5</drake:hydroelastic_modulus>
         </drake:proximity_properties>
       </collision>
     </link>
