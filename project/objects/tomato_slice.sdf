@@ -3,8 +3,8 @@
   <model name='tomato_slice'>
     <link name='tomato_slice'>
       <inertial>
-        <pose>0.006418648294586904 0.012940449949794996 0.015874999750000063 0 0 0</pose>
-        <mass>0.076946296897448905</mass>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.3</mass>
         <inertia>
           <ixx>0.16257480385795609</ixx>
           <ixy>0.009921216437424158</ixy>
@@ -19,16 +19,16 @@
         <geometry>
           <mesh>
             <uri>tomato_slice.obj</uri>
-            <scale>0.0008 0.0008 0.0008</scale>
+            <scale>0.0006 0.0006 0.0006</scale>
           </mesh>
         </geometry>
       </visual>
       <collision name='collision'>
-        <pose>0 0 0 0 0 0</pose>
+        <pose>0 0.0 0.004 0 0 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.005</radius>
-            <length>0.001</length>
+            <radius>0.037</radius>
+            <length>0.006</length>
           </cylinder>
         </geometry>
         <drake:proximity_properties>

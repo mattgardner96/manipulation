@@ -3,7 +3,7 @@
     <link name="mixing_bowl_body_link">
       <pose>0 0 0 0 0 0</pose>
       <inertial>
-        <mass>1.0</mass>
+        <mass>10</mass>
         <pose>0.00000 0.05702 -0.00000 0 0 0</pose>
         <inertia>
           <ixx>9.61221e-03</ixx>
