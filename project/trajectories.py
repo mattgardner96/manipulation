@@ -214,15 +214,17 @@ class PizzaPlanner(LeafSystem):
             )
             pose_trajectory = pose_trajectory_info.trajectory
             start_time_s = pose_trajectory_info.start_time_s
-            if current_time >= start_time_s:
-                pose = pose_trajectory.GetPose(current_time - start_time_s)
-                state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, pose.translation())
+            # if current_time >= start_time_s:
+            #     pose = pose_trajectory.GetPose(current_time - start_time_s)
+            #     current_joint_angles = context.get_discrete_state(self._current_iiwa_positions_idx).get_value()[:10]  # assuming 10 joints
+            #     new_positions = np.concatenate([current_joint_angles, pose.translation()])
+            #     state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, new_positions)
             print("Transitioning to FINISHED FSM state.")
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
         start_time = context.get_time()
-        context_plant = self._iiwa_plant.CreateDefaultContext() # TODO: This is the problem spot.
+        context_plant = self._iiwa_plant.CreateDefaultContext() # TODO: This is a problem spot.
         X_WGinit = self._iiwa_plant.EvalBodyPoseInWorld(context_plant, self._iiwa_plant.GetBodyByName("body"))
         int_1 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([0, 1, 1]))
         int_2 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([-4, 1, 1]))
