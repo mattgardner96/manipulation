@@ -133,9 +133,14 @@ class PizzaRobotState(Enum):
 
 
 class PizzaPlanner(LeafSystem):
-    def __init__(self, num_joint_positions: int, initial_delay_s: int):
+    def __init__(self, 
+        num_joint_positions: int,
+        initial_delay_s: int,
+        controller_plant: MultibodyPlant
+    ):
         super().__init__()
         self._is_finished = False
+        self._iiwa_plant = controller_plant
         self._fsm_state_idx = int(
             self.DeclareAbstractState(AbstractValue.Make(PizzaRobotState.START))
         )
@@ -213,10 +218,10 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
+        if not context.is_root_context():
+            context = self.GetMyContextFromRoot(context)
         start_time = context.get_time()
-        diagram = self.GetParentDiagram()
-        plant = diagram.GetSubsystemByName("plant")
-        context_plant = plant.GetMyContextFromRoot(context)
+        context_plant = self._iiwa_plant.GetMyContextFromRoot(context)
         X_WGinit = plant.GetFreeBodyPose(context_plant, plant.GetBodyByName("gripper"))
         int_1 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([0, 1, 1]))
         int_2 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([-4, 1, 1]))
