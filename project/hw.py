@@ -55,7 +55,8 @@ def CreateStateMachine(
 ):
     planner = PizzaPlanner(
         num_joint_positions=10,
-        initial_delay_s=1
+        initial_delay_s=1,
+        controller_plant=station.GetSubsystemByName("plant")
     )
     state_machine = builder.AddNamedSystem("planner",planner)
     
