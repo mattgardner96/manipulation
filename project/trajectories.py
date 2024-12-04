@@ -164,6 +164,9 @@ class PizzaPlanner(LeafSystem):
         self._iiwa_state_estimated_input_port = self.DeclareVectorInputPort(
             "mobile_iiwa.estimated_state", num_joint_positions * 2
         )
+        self._iiwa_gripper_state_estimated = self.DeclareVectorInputPort(
+            "gripper_state", 4
+        )
         self.DeclareVectorOutputPort(
             "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
         )
@@ -218,11 +221,9 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
-        if not context.is_root_context():
-            context = self.GetMyContextFromRoot(context)
         start_time = context.get_time()
-        context_plant = self._iiwa_plant.GetMyContextFromRoot(context)
-        X_WGinit = plant.GetFreeBodyPose(context_plant, plant.GetBodyByName("gripper"))
+        context_plant = self._iiwa_plant.CreateDefaultContext() # TODO: This is the problem spot.
+        X_WGinit = self._iiwa_plant.EvalBodyPoseInWorld(context_plant, self._iiwa_plant.GetBodyByName("body"))
         int_1 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([0, 1, 1]))
         int_2 = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array([-4, 1, 1]))
         goal_pose = hw.RigidTransform(R=hw.RotationMatrix(), p=np.array(env.bowl_0) + np.array([0.25, 0, 0.25]))
