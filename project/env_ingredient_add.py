@@ -2,9 +2,9 @@ import numpy as np
 
 NUM_MUSHROOMS = 20
 NUM_TOMATOES = 20
-bowl_0 = [-3, 0.5, 0.79]
-bowl_1 = [-3, 1, 0.79]
-bowl_2 = [-3, 1.5, 0.79]
+bowl_0 = [-3, 0.5, 0.73]
+bowl_1 = [-3, 1, 0.73]
+bowl_2 = [-3, 1.5, 0.73]
 pan_position = [-1, -0.5, 0.75]
 
 
@@ -137,9 +137,18 @@ model_drivers:
 
 plant_config = """
 plant_config:
-    time_step: 1e-1
-    contact_model: "hydroelastic_with_fallback"
+    time_step: 1e-2
+    # contact_model: "hydroelastic_with_fallback"
+    contact_model: "point"
     discrete_contact_approximation: "sap"
+
+visualization:
+    publish_inertia: false # Slight speedup
+    publish_contacts: false # Looks much better but maybe harder to debug contact
+
+simulator_config:
+    accuracy: 1e-3
+    integration_scheme: runge_kutta3
 """
 
 def add_mushroom(scenario_data):
