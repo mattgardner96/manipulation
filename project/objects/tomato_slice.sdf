@@ -22,6 +22,12 @@
             <scale>0.0006 0.0006 0.0006</scale>
           </mesh>
         </geometry>
+        <material>
+          <ambient>1.0 0.0 0.0 0.7</ambient> 
+          <diffuse>1.0 0.0 0.0 0.7</diffuse> 
+          <specular>0.0 0.0 0.0 0.7</specular> 
+          <emissive>0.0 0.0 0.0 0.0</emissive> 
+        </material>
       </visual>
       <collision name='collision'>
         <pose>0 0.0 0.004 0 0 0</pose>
