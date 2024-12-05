@@ -202,20 +202,20 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-    builder.Connect(
-        traj_source.get_output_port(),
-        controller.get_input_port(0),
-    )
+    # builder.Connect(
+    #     traj_source.get_output_port(),
+    #     controller.get_input_port(0),
+    # )
 
     # builder.Connect(
     #     station.GetOutputPort("mobile_iiwa.state_estimated"),
     #     controller.GetInputPort("robot_state"),
     # )
 
-    # builder.Connect(
-    #     controller.get_output_port(),
-    #     pos_to_state_sys.get_input_port(),
-    # )
+    builder.Connect(
+        controller.get_output_port(),
+        pos_to_state_sys.get_input_port(),
+    )
 
     builder.Connect(
         pos_to_state_sys.get_output_port(),
@@ -225,7 +225,7 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     state_machine = CreateStateMachine(builder,station)
     builder.Connect(
         state_machine.get_output_port(0),
-        pos_to_state_sys.get_input_port()
+        controller.get_input_port(0)
     )
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
