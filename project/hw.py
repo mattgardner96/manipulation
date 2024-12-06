@@ -46,30 +46,26 @@ from manipulation.meshcat_utils import AddMeshcatTriad
 sys.path.append('.')
 import env_ingredient_add
 importlib.reload(env_ingredient_add)
+import trajectories
+from trajectories import PizzaPlanner, PizzaRobotState
 
 
 
-class PoseTrajectorySource(LeafSystem):
-    """
-    returns desired list of poses of dimension 20: 10 positions, 10 velocities
-    (optional) pose_trajectory: trajectory to follow. if context does not already exist, pass it in from the plant.
-    """
-    # pose_trajectory: PiecewisePose = PiecewisePose()
+def CreateStateMachine(
+    builder: DiagramBuilder, station, frame: Frame = None
+):
+    planner = PizzaPlanner(
+        num_joint_positions=10,
+        initial_delay_s=1,
+        controller_plant=station.GetSubsystemByName("plant"),
+    )
 
-    # need a way to set a new trajectory within this method?
-
-    def __init__(self, pose_trajectory):
-        LeafSystem.__init__(self)
-        self._pose_trajectory = pose_trajectory
-        self.DeclareAbstractOutputPort(
-            "pose", lambda: AbstractValue.Make(RigidTransform()), self.CalcPose
-        )
-
-    def CalcPose(self, context, output):
-        output.set_value(self._pose_trajectory.GetPose(context.get_time()))
-        pose = self._pose_trajectory.GetPose(context.get_time())
-        # print(f"Pose dimensions: {pose.GetAsVector().size()}")
-        output.set_value(pose)
+    # plant = station.GetSubsystemByName("plant")
+    # plant_context = plant.CreateDefaultContext()
+    # print(f"within CreateFSM: {plant.GetPositions(plant_context)}")
+    state_machine = builder.AddNamedSystem("planner",planner)
+    
+    return state_machine
 
 
 def CreateIiwaControllerPlant():
@@ -190,6 +186,7 @@ def print_diagram(diagram, output_file="diagram.png"):
 
 
 def init_builder(meshcat, scenario, traj=PiecewisePose()):
+    from trajectories import PoseTrajectorySource
     
     num_positions = 10
     time_step = 1e-3
@@ -211,6 +208,17 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         frame=gripper_frame,
     )
 
+    '''
+    The integrator of the controller is seeded with a starting joint position array.
+    I want to either: reset the diff IK with the current position of the robot (so it holds current position),
+    or change the seed value to the current position of the robot.
+
+    The more robust solution (that I'll need to do anyway) is to reset the diff IK and pause the integrator.
+
+    Nicholas does this with a port controlling "reset_diff_ik" on the integrator. It's just a boolean.
+    On the integrator side, he's got the integrator wrapped in a 
+    '''
+
     pos_to_state_sys = builder.AddSystem(
         StateInterpolatorWithDiscreteDerivative(
             num_positions,
@@ -222,10 +230,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     if traj is not None:
         traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-        builder.Connect(
-            traj_source.get_output_port(),
-            controller.get_input_port(0),
-        )
+        # builder.Connect(
+        #     traj_source.get_output_port(),
+        #     controller.get_input_port(0),
+        # )
 
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
@@ -249,6 +257,21 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     point_cloud = Add_Camera_Point_Cloud(meshcat,scenario, builder,station)  
 
+
+    state_machine = CreateStateMachine(builder,station)
+    
+    builder.Connect(
+        state_machine.get_output_port(0),
+        controller.get_input_port(0)
+    )
+    builder.Connect(
+        station.GetOutputPort("mobile_iiwa.state_estimated"),
+        state_machine.get_input_port(0)
+    )
+    builder.Connect(
+        station.GetOutputPort("body_poses"),
+        state_machine.GetInputPort("body_poses")
+    )
 
     return builder, station
 
@@ -355,6 +378,11 @@ def create_painter_trajectory(diagram,meshcat=None,context=None):
     return PiecewisePose.MakeLinear(times, key_frame_poses)
 
 
+def reset_positions(diff_ik_params: DifferentialInverseKinematicsParameters,q_set):
+    new_joint_pos = q_set[:10]
+    diff_ik_params.set_nominal_joint_position(q_set[:10])
+
+
 
 def fix_base_pos(diff_ik_params: DifferentialInverseKinematicsParameters,fix_base):
     # example usage: set_base_vels(bot_ik_params,np.zeros((2,3))) 
@@ -367,7 +395,6 @@ def fix_base_pos(diff_ik_params: DifferentialInverseKinematicsParameters,fix_bas
         else:
             # if free, we set to infinity
             new_joint_pos[:, i] = np.array([[-np.inf],[np.inf]]).T
-            print(new_joint_pos[:,i])
     # new_joint_vels[:,0:7] = curr_joint_vels(diff_ik_params)[:,0:7]
     new_joint_pos[:,3:10] = np.array([[-np.inf],[np.inf]]) * np.ones((2,7))
     diff_ik_params.set_joint_position_limits(tuple([new_joint_pos[0]-tolerance, new_joint_pos[1]+tolerance]))
