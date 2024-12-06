@@ -46,6 +46,10 @@ initial_scene = """
             translation: """+str(pan_position)+"""
 
 - add_model:
+    name: za1
+    file: package://pizzabot/objects/za.sdf
+
+- add_model:
     name: oven1
     file: package://pizzabot/objects/ovenV1.sdf
 
@@ -100,6 +104,12 @@ initial_scene = """
     child: camera0::base
     
 - add_weld:
+    parent: panV1
+    child: za1::za
+    X_PC:
+      translation: [0, 0, 0.01]
+
+- add_weld:
     parent: world
     child: table0::table
     X_PC:
@@ -137,7 +147,6 @@ cameras:
         X_PB:
             base_frame: camera_table_above
 """
-
 
 model_drivers = """
 model_drivers:
@@ -230,6 +239,7 @@ def get_environment_set_up(no_scene=False,include_driver=True):
         scenario_data = add_mushroom(scenario_data)
         scenario_data = add_tomato(scenario_data)
 
+    scenario_data += camera
     if include_driver:
         scenario_data += model_drivers
     
@@ -248,6 +258,9 @@ def pizza_state_environment_set_up():
     default_free_body_pose:
         panV1:
             translation: [-1, -0.5, 0.73]
+- add_model:
+    name: za1
+    file: package://pizzabot/objects/za.sdf
         
 - add_model:
     name: table0
@@ -256,6 +269,20 @@ def pizza_state_environment_set_up():
 - add_model:
     name: camera0
     file: package://manipulation/camera_box.sdf
+
+
+- add_model:
+    name: mushroom_0
+    file: package://pizzabot/objects/mush_slice.sdf
+- add_model:
+    name: mushroom_1
+    file: package://pizzabot/objects/mush_slice.sdf         
+- add_model:
+    name: tomato_0
+    file: package://pizzabot/objects/tomato_slice.sdf
+- add_model:
+    name: tomato_1
+    file: package://pizzabot/objects/tomato_slice.sdf
 
 - add_frame:
     name: camera_table_above
@@ -267,6 +294,39 @@ def pizza_state_environment_set_up():
 - add_weld:
     parent: camera_table_above
     child: camera0::base
+
+- add_weld:
+    parent: panV1
+    child: za1::za
+    X_PC:
+      translation: [0, 0, 0.01]
+      
+
+- add_weld:
+    parent: za
+    child: mushroom_0::mush_slice
+    X_PC:
+      translation: [0, 0.1, 0.01]
+      rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
+
+- add_weld:
+    parent: za
+    child: mushroom_1::mush_slice
+    X_PC:
+      translation: [0, -0.1, 0.01]
+      rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
+
+- add_weld:
+    parent: za
+    child: tomato_0::tomato_slice
+    X_PC:
+      translation: [0.1, 0, 0.01]
+
+- add_weld:
+    parent: za
+    child: tomato_1::tomato_slice
+    X_PC:
+      translation: [-0.1, 0, 0.01]
     
 - add_weld:
     parent: world
