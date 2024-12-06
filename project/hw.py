@@ -55,7 +55,7 @@ def CreateStateMachine(
 ):
     planner = PizzaPlanner(
         num_joint_positions=10,
-        initial_delay_s=1,
+        initial_delay_s=0,
         controller_plant=station.GetSubsystemByName("plant"),
     )
 
@@ -117,7 +117,6 @@ def AddMobileIiwaDifferentialIK(
 
     if frame is None:
         frame = plant.GetFrameByName("iiwa_link_7")
-        
 
     mobile_iiwa_velocity_limits = np.array([0.5, 0.5, 0.5, 1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3])
     params.set_joint_velocity_limits(
@@ -198,6 +197,17 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         frame=gripper_frame,
     )
 
+    '''
+    The integrator of the controller is seeded with a starting joint position array.
+    I want to either: reset the diff IK with the current position of the robot (so it holds current position),
+    or change the seed value to the current position of the robot.
+
+    The more robust solution (that I'll need to do anyway) is to reset the diff IK and pause the integrator.
+
+    Nicholas does this with a port controlling "reset_diff_ik" on the integrator. It's just a boolean.
+    On the integrator side, he's got the integrator wrapped in a 
+    '''
+
     pos_to_state_sys = builder.AddSystem(
         StateInterpolatorWithDiscreteDerivative(
             num_positions,
@@ -209,10 +219,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     if traj is not None:
         traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-        builder.Connect(
-            traj_source.get_output_port(),
-            controller.get_input_port(0),
-        )
+        # builder.Connect(
+        #     traj_source.get_output_port(),
+        #     controller.get_input_port(0),
+        # )
 
     # builder.Connect(
     #     station.GetOutputPort("mobile_iiwa.state_estimated"),
@@ -231,10 +241,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     state_machine = CreateStateMachine(builder,station)
     
-    # builder.Connect(
-    #     state_machine.get_output_port(0),
-    #     controller.get_input_port(0)
-    # )
+    builder.Connect(
+        state_machine.get_output_port(0),
+        controller.get_input_port(0)
+    )
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         state_machine.get_input_port(0)
@@ -346,6 +356,11 @@ def create_painter_trajectory(diagram,meshcat=None,context=None):
     times = np.linspace(0, total_time, num_key_frames + 1)
 
     return PiecewisePose.MakeLinear(times, key_frame_poses)
+
+
+def reset_positions(diff_ik_params: DifferentialInverseKinematicsParameters,q_set):
+    new_joint_pos = q_set[:10]
+    diff_ik_params.set_nominal_joint_position(q_set[:10])
 
 
 
