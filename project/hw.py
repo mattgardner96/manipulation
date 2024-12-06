@@ -219,10 +219,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     if traj is not None:
         traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-        # builder.Connect(
-        #     traj_source.get_output_port(),
-        #     controller.get_input_port(0),
-        # )
+        builder.Connect(
+            traj_source.get_output_port(),
+            controller.get_input_port(0),
+        )
 
     # builder.Connect(
     #     station.GetOutputPort("mobile_iiwa.state_estimated"),
@@ -241,10 +241,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     state_machine = CreateStateMachine(builder,station)
     
-    builder.Connect(
-        state_machine.get_output_port(0),
-        controller.get_input_port(0)
-    )
+    # builder.Connect(
+    #     state_machine.get_output_port(0),
+    #     controller.get_input_port(0)
+    # )
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         state_machine.get_input_port(0)
