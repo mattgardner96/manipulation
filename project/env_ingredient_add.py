@@ -129,6 +129,16 @@ initial_scene = """
 
 """
 
+camera = """
+cameras:
+    camera0:
+        name: table_camera_0
+        depth: True
+        X_PB:
+            base_frame: camera_table_above
+"""
+
+
 model_drivers = """
 model_drivers:
     mobile_iiwa: !InverseDynamicsDriver {}
