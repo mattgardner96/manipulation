@@ -216,7 +216,13 @@ class PizzaPlanner(LeafSystem):
             "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
         )
 
-        # self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
+        self.DeclareAbstractOutputPort(
+            "reset_diff_ik",
+            lambda: AbstractValue.Make(False),
+            self._calc_diff_ik_reset,
+        )
+
+        self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
         self.DeclarePerStepUnrestrictedUpdateEvent(self._run_fsm_logic)
 
     def _get_current_iiwa_positions(self, context: Context, output: BasicVector) -> None:
@@ -233,12 +239,24 @@ class PizzaPlanner(LeafSystem):
         desired_pose = context.get_abstract_state(self._desired_pose_idx).get_value()
         output.set_value(desired_pose)
 
+    def _calc_diff_ik_reset(self, context: Context, output: AbstractValue) -> None:
+        # credit: used with permission from Nicholas.
+        """Logic for deciding when to reset the differential IK controller state."""
+        state = context.get_abstract_state(int(self._fsm_state_idx)).get_value()
+        if state == PizzaRobotState.PLAN_IIWA_PAINTER:
+            # Need to reset before executing a trajectory.
+            output.set_value(True)
+        else:
+            output.set_value(False)
+
+    # init function
     def _initialize_discrete_state(self, context: Context, discrete_values: DiscreteValues) -> None:
         discrete_values.set_value(
             self._current_iiwa_positions_idx,
             self._iiwa_state_estimated_input_port.Eval(context)[:10],
         )
 
+    ###------------ STATE MACHINE LOGIC -----------###
     def _run_fsm_logic(self, context: Context, state: State) -> None:
         current_time = context.get_time()
         timing_information: PizzaBotTimingInformation = (
