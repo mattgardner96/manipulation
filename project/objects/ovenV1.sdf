@@ -1,24 +1,24 @@
 <sdf xmlns:drake="drake.mit.edu" version="1.7">
   <model name="ovenV1">
-    <link name="ovenV1_body_link">
+    <link name="ovenV1">
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <mass>2500.0</mass>
-        <pose>0.00000 0.00022 0.00574 0 0 0</pose>
+        <pose>0.00000 0.02176 0.57405 0 0 0</pose>
         <inertia>
-          <ixx>5.20738e-02</ixx>
+          <ixx>5.20738e+02</ixx>
           <ixy>-0.00000e+00</ixy>
           <ixz>-0.00000e+00</ixz>
-          <iyy>5.19619e-02</iyy>
-          <iyz>-2.39882e-03</iyz>
-          <izz>3.46152e-02</izz>
+          <iyy>5.19619e+02</iyy>
+          <iyz>-2.39882e+01</iyz>
+          <izz>3.46152e+02</izz>
         </inertia>
       </inertial>
       <visual name="visual">
         <geometry>
           <mesh>
             <uri>ovenV1.obj</uri>
-            <scale>0.007 0.007 0.007</scale>
+            <scale>0.7 0.7 0.7</scale>
           </mesh>
         </geometry>
       </visual>

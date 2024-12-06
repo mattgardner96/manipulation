@@ -39,7 +39,7 @@ from pydrake.systems.analysis import Simulator
 from pydrake.visualization import ModelVisualizer
 
 from manipulation import running_as_notebook
-from manipulation.station import LoadScenario, MakeHardwareStation, MakeMultibodyPlant
+from manipulation.station import LoadScenario, MakeHardwareStation, MakeMultibodyPlant, AddPointClouds
 from manipulation.utils import ConfigureParser
 from manipulation.meshcat_utils import AddMeshcatTriad
 
@@ -169,6 +169,17 @@ def diff_ik_solver(J_G, V_G_desired, q_now, v_now, p_now):
     v_solution = result.GetSolution(v)
     return v_solution
 
+def Add_Camera_Point_Cloud(meshcat,scenario, builder,station):
+    # Adding point cloud extractors:
+    to_point_cloud = AddPointClouds(
+        scenario=scenario, station=station, builder=builder, meshcat=meshcat
+    )
+
+    # Connect point clouds with output port:
+    for idx, name in enumerate(to_point_cloud.keys()):
+        builder.ExportOutput(
+            to_point_cloud[name].get_output_port(), name+"_ptcloud")
+
 def print_diagram(diagram, output_file="diagram.png"):
         # Visualize and save the diagram as a PNG
         graph = pydot.graph_from_dot_data(
@@ -208,12 +219,13 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         )
     )
 
-    traj_source = builder.AddSystem(PoseTrajectorySource(traj))
+    if traj is not None:
+        traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-    builder.Connect(
-        traj_source.get_output_port(),
-        controller.get_input_port(0),
-    )
+        builder.Connect(
+            traj_source.get_output_port(),
+            controller.get_input_port(0),
+        )
 
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
@@ -230,6 +242,14 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         station.GetInputPort("mobile_iiwa.desired_state")
     )
 
+    builder.ExportOutput(
+        station.GetOutputPort("table_camera_0.depth_image"), "camera_0.depth_image")
+    builder.ExportOutput(
+        station.GetOutputPort("table_camera_0.rgb_image"), "camera_0.rgb_image")
+
+    point_cloud = Add_Camera_Point_Cloud(meshcat,scenario, builder,station)  
+
+
     return builder, station
 
 
@@ -238,6 +258,7 @@ def init_diagram(meshcat, scenario, traj=PiecewisePose()):
 
     diagram = builder.Build() # IMPT: must build the diagram before visualizing it
     diagram.set_name("diagram")
+    
 
     simulator = Simulator(diagram)
 
