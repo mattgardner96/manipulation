@@ -1,4 +1,3 @@
-import hw
 import numpy as np
 import env_ingredient_add as env
 from pydrake.trajectories import PiecewisePose
@@ -23,6 +22,7 @@ from pydrake.all import (
     RigidTransform,
     State,
 )
+from manipulation.meshcat_utils import AddMeshcatTriad
 
 class PoseTrajectorySource(LeafSystem):
     """
@@ -107,15 +107,15 @@ class PiecewisePoseWithTimingInformation:
     start_time_s: float = np.nan
 
 @dataclass
-class OpenLoopPlanarPushingPlanarTimingInformation:
+class PizzaBotTimingInformation:
     """
     Timing information for OpenLoopPlanarPushingPlanar. All times are relative to the
     simulation start and in seconds. All values are NaN by default.
     """
 
-    start_move_to_start: float = np.nan
+    start_iiwa_painter: float = np.nan
     """Start time of the move to pushing start trajectory."""
-    end_move_to_start: float = np.nan
+    end_iiwa_painter: float = np.nan
     """Finish time of the move to pushing start trajeectory."""
     start_pushing: float = np.nan
     """Start time of the pushing trajectory."""
@@ -143,15 +143,18 @@ class PizzaPlanner(LeafSystem):
         super().__init__()
         self._is_finished = False
         self._iiwa_plant = controller_plant
-        
+        self._gripper_frame = self._iiwa_plant.GetFrameByName("body")
+        gripper_body = self._iiwa_plant.GetBodyByName("body")
+        self._gripper_body_index = gripper_body.index()
+
         self._fsm_state_idx = int(
             self.DeclareAbstractState(AbstractValue.Make(PizzaRobotState.START))
         )
         self._timing_information_idx = int(
             self.DeclareAbstractState(
                 AbstractValue.Make(
-                    OpenLoopPlanarPushingPlanarTimingInformation(
-                        start_move_to_start=initial_delay_s
+                    PizzaBotTimingInformation(
+                        start_iiwa_painter=initial_delay_s
                     )
                 )
             )
@@ -159,7 +162,7 @@ class PizzaPlanner(LeafSystem):
         self._current_iiwa_positions_idx = int(
             self.DeclareDiscreteState(num_joint_positions)
         )
-        self._current_pose_trajectory_idx = int(
+        self._pose_trajectory_idx = int(
             self.DeclareAbstractState(
                 AbstractValue.Make(PiecewisePoseWithTimingInformation())
             )
@@ -167,9 +170,16 @@ class PizzaPlanner(LeafSystem):
 
         self._desired_pose_idx = self.DeclareAbstractState(AbstractValue.Make(RigidTransform()))
 
+        # INPUT PORTS
         self._iiwa_state_estimated_input_port = self.DeclareVectorInputPort(
             "mobile_iiwa.estimated_state", num_joint_positions * 2
+        ) # must be first
+        self._body_poses_input_port = self.DeclareAbstractInputPort(
+            "body_poses",
+            AbstractValue.Make([RigidTransform()])
         )
+
+        # OUTPUT PORTS
         self.DeclareAbstractOutputPort(
             "desired_pose",
             lambda: AbstractValue.Make(RigidTransform()),
@@ -178,12 +188,19 @@ class PizzaPlanner(LeafSystem):
         self.DeclareVectorOutputPort(
             "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
         )
+
         self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
         self.DeclarePerStepUnrestrictedUpdateEvent(self._run_fsm_logic)
 
     def _get_current_iiwa_positions(self, context: Context, output: BasicVector) -> None:
         positions = context.get_discrete_state(self._current_iiwa_positions_idx).get_value()
         output.set_value(positions)
+
+    def _solve_gripper_pose(self, context: Context) -> RigidTransform:
+        body_poses = self._body_poses_input_port.Eval(context)
+        gripper_pose = body_poses[self._gripper_body_index]
+        
+        return gripper_pose
 
     def _get_desired_pose(self, context: Context, output: AbstractValue) -> None:
         """
@@ -211,7 +228,7 @@ class PizzaPlanner(LeafSystem):
 
     def _run_fsm_logic(self, context: Context, state: State) -> None:
         current_time = context.get_time()
-        timing_information: OpenLoopPlanarPushingPlanarTimingInformation = (
+        timing_information: PizzaBotTimingInformation = (
             context.get_mutable_abstract_state(self._timing_information_idx).get_value()
         )
         mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
@@ -225,18 +242,40 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
         
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
-            pass
+            gripper_pose = self._solve_gripper_pose(context)
+
+            pose_traj = self._create_painter_traj(
+                gripper_pose,
+                start_time_s=timing_information.start_iiwa_painter,
+                context=context
+            )
+
+            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
+
+            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
-            print("Current state: PLAN_IIWA_PAINTER")
-            pose_traj = self.traj_linear_move_to_bowl_0(context)
-            state.get_mutable_abstract_state(self._current_pose_trajectory_idx).set_value(
-                PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
-            )
-            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            pass
+            # DEADC0DE
+            # print("Current state: PLAN_IIWA_PAINTER")
+            # pose_traj = self.traj_linear_move_to_bowl_0(context)
+            # state.get_mutable_abstract_state(self._current_pose_trajectory_idx).set_value(
+            #     PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
+            # )
+            # print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
+            # mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
 
         elif fsm_state_value == PizzaRobotState.EXECUTE_IIWA_PAINTER:
+
+            pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
+
+            if current_time >= timing_information.start_iiwa_painter:
+                desired_pose = pose_traj.trajectory.GetPose(current_time - timing_information.start_iiwa_painter)
+                state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
+            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
+                print("Transitioning to FINISHED FSM state.")
+                mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             pass
 
         elif fsm_state_value == PizzaRobotState.EXECUTE_TRAJECTORY_0:
@@ -290,6 +329,73 @@ class PizzaPlanner(LeafSystem):
             [X_WGinit, int_1, int_2, goal_pose]
         )
         return poses
+
+    def _create_painter_traj(
+        self,
+        X_WG,
+        start_time_s=0.0,
+        meshcat=None,
+        context=None
+    ) -> PiecewisePoseWithTimingInformation:
+        def compose_circular_key_frames(thetas, X_WCenter, radius):
+            """
+            returns: a list of RigidTransforms
+            """
+            # this is an template, replace your code below
+            key_frame_poses_in_world = []
+            for theta in thetas:
+                position = X_WCenter.translation() + np.array([
+                    radius * np.cos(theta),
+                    radius * np.sin(theta),
+                    0.0  # z-coordinate stays constant for a horizontal trajectory
+                ])
+                
+                # Use the same rotation matrix for all keyframes
+                rotation_matrix = X_WCenter.rotation()
+                this_pose = RigidTransform(rotation_matrix, position)
+                key_frame_poses_in_world.append(this_pose)
+                # print(f"Key frame pose at theta {theta}: Position = {position}, Rotation = {rotation_matrix}")
+
+            return key_frame_poses_in_world
+        
+        # define center and radius
+        radius = 0.1
+        p0 = [0.45, 0.0, 0.4]
+        p_base = [0.0, 0.0, 0.0]
+        R0 = RotationMatrix(np.array([[0, 1, 0], [0, 0, -1], [-1, 0, 0]]).T)
+        X_WCenter = RigidTransform(R0, p0)
+
+        num_key_frames = 10
+        """
+        you may use different thetas as long as your trajectory starts
+        from the Start Frame above and your rotation is positive
+        in the world frame about +z axis
+        thetas = np.linspace(0, 2*np.pi, num_key_frames)
+        """
+        thetas = np.linspace(0, 2 * np.pi, num_key_frames)
+
+        key_frame_poses = compose_circular_key_frames(thetas, X_WCenter, radius)
+        # print("key_frame_poses: ", key_frame_poses)
+        # print("length of key_frame_poses: ", len(key_frame_poses))
+
+        # X_WGinit = get_X_WG(diagram,context=context)
+        # print("X_WGinit: ", X_WGinit)
+        X_WGinit = X_WG
+
+        total_time = 20.0
+        key_frame_poses = [X_WGinit] + compose_circular_key_frames(thetas, X_WCenter, radius)
+
+        print(meshcat)
+        if meshcat is not None:
+            for i, frame in enumerate(key_frame_poses):
+                AddMeshcatTriad(meshcat, X_PT=frame, path="frame"+str(i))
+
+        times = np.linspace(start_time_s, start_time_s + total_time, num_key_frames + 1)
+
+        return PiecewisePoseWithTimingInformation(
+            trajectory=PiecewisePose.MakeLinear(times, key_frame_poses),
+            start_time_s=start_time_s
+        )
 
     # def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
     #     start_time = context.get_time()

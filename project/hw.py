@@ -231,6 +231,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         state_machine.get_input_port(0)
     )
+    builder.Connect(
+        station.GetOutputPort("body_poses"),
+        state_machine.GetInputPort("body_poses")
+    )
 
     return builder, station
 
