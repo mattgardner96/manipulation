@@ -130,7 +130,7 @@ class PizzaRobotState(Enum):
     PLAN_IIWA_PAINTER = 1
     PLAN_TRAJ_0 = 2
     EXECUTE_IIWA_PAINTER = 3
-    EXECUTE_TRAJECTORY_0 = 4
+    EXECUTE_PLANNED_TRAJECTORY = 4
     FINISHED = 5
 
 
@@ -270,8 +270,10 @@ class PizzaPlanner(LeafSystem):
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+            mutable_fsm_state.set_value(PizzaRobotState.PLAN_TRAJ_0)
         
+        
+        # ----------------- IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
             gripper_pose = self._solve_gripper_pose(context)
 
@@ -283,11 +285,20 @@ class PizzaPlanner(LeafSystem):
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
 
-            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
             print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
+
+        # ----------------- TRAJECTORY_0 ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
-            pass
+            pose_traj = self.traj_linear_move_to_bowl_0(context)
+            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
+                PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
+            )
+
+            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
+            print("Transitioning to EXECUTE_TRAJECTORY_0 FSM state.")
+        
             # DEADC0DE
             # print("Current state: PLAN_IIWA_PAINTER")
             # pose_traj = self.traj_linear_move_to_bowl_0(context)
@@ -296,9 +307,8 @@ class PizzaPlanner(LeafSystem):
             # )
             # print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
             # mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
-
-        elif fsm_state_value == PizzaRobotState.EXECUTE_IIWA_PAINTER:
-
+            
+        elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
             pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
 
             if current_time >= timing_information.start_iiwa_painter:
@@ -307,38 +317,38 @@ class PizzaPlanner(LeafSystem):
             if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
                 print("Transitioning to FINISHED FSM state.")
                 mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
-            pass
 
-        elif fsm_state_value == PizzaRobotState.EXECUTE_TRAJECTORY_0:
-            traj_info = context.get_abstract_state(
-                self._current_pose_trajectory_idx
-            ).get_value()
+        # elif fsm_state_value == PizzaRobotState.EXECUTE_TRAJECTORY_0:
+        #     traj_info = context.get_abstract_state(
+        #         self._current_pose_trajectory_idx
+        #     ).get_value()
 
-            desired_time = current_time - traj_info.start_time_s
-            if desired_time >= traj_info.trajectory.end_time():
-                # Trajectory finished
-                # Set final pose
-                final_pose = traj_info.trajectory.GetPose(traj_info.trajectory.end_time())
-                # state.get_mutable_discrete_state().get_mutable_vector(
-                #     self._current_iiwa_positions_idx
-                # ).set_value(final_pose.translation())
-                state.get_mutable_abstract_state(self._desired_pose_idx).set_value(final_pose)
+        #     desired_time = current_time - traj_info.start_time_s
+        #     if desired_time >= traj_info.trajectory.end_time():
+        #         # Trajectory finished
+        #         # Set final pose
+        #         final_pose = traj_info.trajectory.GetPose(traj_info.trajectory.end_time())
+        #         # state.get_mutable_discrete_state().get_mutable_vector(
+        #         #     self._current_iiwa_positions_idx
+        #         # ).set_value(final_pose.translation())
+        #         state.get_mutable_abstract_state(self._desired_pose_idx).set_value(final_pose)
                 
-                print("Transitioning to FINISHED FSM state.")
-                mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
-            else:
-                # During trajectory execution, update positions based on trajectory
-                if desired_time >= 0:
-                    pose = traj_info.trajectory.GetPose(desired_time)
-                    # Pass the desired pose to the external differential inverse kinematics engine
-                    desired_pose = pose
-                    # q_current = state.get_discrete_state(self._current_iiwa_positions_idx).get_value()
-                else:
-                    # Before trajectory start, set to initial pose
-                    initial_pose = traj_info.trajectory.GetPose(0.0)
-                    state.get_mutable_discrete_state().get_mutable_vector(
-                        self._current_iiwa_positions_idx
-                    ).set_value(initial_pose.translation())
+        #         print("Transitioning to FINISHED FSM state.")
+        #         mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+            
+            # else:
+            #     # During trajectory execution, update positions based on trajectory
+            #     if desired_time >= 0:
+            #         pose = traj_info.trajectory.GetPose(desired_time)
+            #         # Pass the desired pose to the external differential inverse kinematics engine
+            #         desired_pose = pose
+            #         # q_current = state.get_discrete_state(self._current_iiwa_positions_idx).get_value()
+            #     else:
+            #         # Before trajectory start, set to initial pose
+            #         initial_pose = traj_info.trajectory.GetPose(0.0)
+            #         state.get_mutable_discrete_state().get_mutable_vector(
+            #             self._current_iiwa_positions_idx
+            #         ).set_value(initial_pose.translation())
 
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
