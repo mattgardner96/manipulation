@@ -265,15 +265,19 @@ class PizzaPlanner(LeafSystem):
         mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
 
+        if self._is_finished:
+            return
+
+        # ----------------- START ----------------- #
         if fsm_state_value == PizzaRobotState.START:
             print("Current state: START")
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.PLAN_TRAJ_0)
+            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
         
         
-        # ----------------- IIWA_PAINTER ----------------- #
+        # ----------------- PLAN IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
             gripper_pose = self._solve_gripper_pose(context)
 
@@ -289,34 +293,32 @@ class PizzaPlanner(LeafSystem):
             print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
 
-        # ----------------- TRAJECTORY_0 ----------------- #
+        # ----------------- PLAN TRAJECTORY_0 ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
             pose_traj = self.traj_linear_move_to_bowl_0(context)
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
                 PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
             )
-
             mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
-            print("Transitioning to EXECUTE_TRAJECTORY_0 FSM state.")
-        
-            # DEADC0DE
-            # print("Current state: PLAN_IIWA_PAINTER")
-            # pose_traj = self.traj_linear_move_to_bowl_0(context)
-            # state.get_mutable_abstract_state(self._current_pose_trajectory_idx).set_value(
-            #     PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
-            # )
-            # print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
-            # mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
             
+        
+        # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
             pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
 
             if current_time >= timing_information.start_iiwa_painter:
                 desired_pose = pose_traj.trajectory.GetPose(current_time - timing_information.start_iiwa_painter)
                 state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
+            
             if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
-                print("Transitioning to FINISHED FSM state.")
+                print("Transitioning to FINISHED state.")
                 mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+
+        elif fsm_state_value == PizzaRobotState.FINISHED:
+            self._is_finished = True
+            print("Task is finished.")
+
 
         # elif fsm_state_value == PizzaRobotState.EXECUTE_TRAJECTORY_0:
         #     traj_info = context.get_abstract_state(
