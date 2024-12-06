@@ -50,6 +50,7 @@ import trajectories
 from trajectories import PizzaPlanner, PizzaRobotState
 
 
+
 def CreateStateMachine(
     builder: DiagramBuilder, station, frame: Frame = None
 ):
@@ -110,13 +111,13 @@ def AddMobileIiwaDifferentialIK(
     )
     time_step = plant.time_step()
     q0 = plant.GetPositions(plant.CreateDefaultContext())
-    print(q0)
     params.set_nominal_joint_position(q0)
     params.set_end_effector_angular_speed_limit(2)
     params.set_end_effector_translational_velocity_limits([-2, -2, -2], [2, 2, 2])
 
     if frame is None:
         frame = plant.GetFrameByName("iiwa_link_7")
+        
 
     mobile_iiwa_velocity_limits = np.array([0.5, 0.5, 0.5, 1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3])
     params.set_joint_velocity_limits(
@@ -190,7 +191,6 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     world_frame = plant.world_frame()
 
     iiwa_controller_plant = CreateIiwaControllerPlant()
-
     controller = AddMobileIiwaDifferentialIK(
         builder,
         plant=iiwa_controller_plant,
@@ -224,10 +224,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
             controller.get_input_port(0),
         )
 
-    # builder.Connect(
-    #     station.GetOutputPort("mobile_iiwa.state_estimated"),
-    #     controller.GetInputPort("robot_state"),
-    # )
+    builder.Connect(
+        station.GetOutputPort("mobile_iiwa.state_estimated"),
+        controller.GetInputPort("robot_state"),
+    )
 
     builder.Connect(
         controller.get_output_port(),
