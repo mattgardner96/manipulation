@@ -375,7 +375,6 @@ def fix_base_pos(diff_ik_params: DifferentialInverseKinematicsParameters,fix_bas
         else:
             # if free, we set to infinity
             new_joint_pos[:, i] = np.array([[-np.inf],[np.inf]]).T
-            print(new_joint_pos[:,i])
     # new_joint_vels[:,0:7] = curr_joint_vels(diff_ik_params)[:,0:7]
     new_joint_pos[:,3:10] = np.array([[-np.inf],[np.inf]]) * np.ones((2,7))
     diff_ik_params.set_joint_position_limits(tuple([new_joint_pos[0]-tolerance, new_joint_pos[1]+tolerance]))
