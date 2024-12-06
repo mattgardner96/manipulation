@@ -147,6 +147,9 @@ class PizzaPlanner(LeafSystem):
         gripper_body = self._iiwa_plant.GetBodyByName("body")
         self._gripper_body_index = gripper_body.index()
 
+        plant_context = self._iiwa_plant.CreateDefaultContext()
+        # print(f"within planner: {self._iiwa_plant.GetPositions(plant_context)}")
+
         self._fsm_state_idx = int(
             self.DeclareAbstractState(AbstractValue.Make(PizzaRobotState.START))
         )
@@ -168,28 +171,52 @@ class PizzaPlanner(LeafSystem):
             )
         )
 
-        self._desired_pose_idx = self.DeclareAbstractState(AbstractValue.Make(RigidTransform()))
-
         # INPUT PORTS
         self._iiwa_state_estimated_input_port = self.DeclareVectorInputPort(
             "mobile_iiwa.estimated_state", num_joint_positions * 2
         ) # must be first
+
         self._body_poses_input_port = self.DeclareAbstractInputPort(
             "body_poses",
             AbstractValue.Make([RigidTransform()])
         )
 
-        # OUTPUT PORTS
+        # Get the initial joint positions from the estimated state input port
+        # Note: Since this is during initialization, you might need to set initial positions manually
+        initial_iiwa_state = self._iiwa_plant.GetPositions(plant_context)
+        if self._iiwa_state_estimated_input_port.HasValue(self.CreateDefaultContext()):
+            initial_iiwa_state = self._iiwa_state_estimated_input_port.Eval(self.CreateDefaultContext())
+        q0 = initial_iiwa_state[:len(initial_iiwa_state)]
+
+        # Set the positions in the plant context
+        self._iiwa_plant.SetPositions(plant_context, q0)
+
+        # Get the gripper pose
+        gripper_frame = self._iiwa_plant.GetFrameByName("body")
+        default_gripper_pose = self._iiwa_plant.CalcRelativeTransform(
+            plant_context,
+            self._iiwa_plant.world_frame(),
+            gripper_frame
+        )
+
+        # print(f"{default_gripper_pose=}")
+
+        self._desired_pose_idx = self.DeclareAbstractState(
+            AbstractValue.Make(default_gripper_pose)
+        )
+
+        # OUTPUT PORTS (remain the same)
         self.DeclareAbstractOutputPort(
             "desired_pose",
-            lambda: AbstractValue.Make(RigidTransform()),
-            self._get_desired_pose
+            alloc=lambda: AbstractValue.Make(RigidTransform()),
+            calc=self._set_desired_pose
         )
+
         self.DeclareVectorOutputPort(
             "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
         )
 
-        self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
+        # self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
         self.DeclarePerStepUnrestrictedUpdateEvent(self._run_fsm_logic)
 
     def _get_current_iiwa_positions(self, context: Context, output: BasicVector) -> None:
@@ -202,22 +229,8 @@ class PizzaPlanner(LeafSystem):
         
         return gripper_pose
 
-    def _get_desired_pose(self, context: Context, output: AbstractValue) -> None:
-        """
-        Callback to compute and set the desired pose.
-        
-        Args:
-            context (Context): The current simulation context.
-            output (AbstractValue): The output port value to set.
-        """
-        current_time = context.get_time()
-        # Assuming self._pose_trajectory is properly initialized and set
-        # You might need to implement how _pose_trajectory is managed
-        desired_pose = RigidTransform()
-        # Example: Retrieve desired_pose from a trajectory
-        # desired_pose = self._pose_trajectory.GetPose(current_time)
-        
-        # Set the desired pose to the output
+    def _set_desired_pose(self, context: Context, output: AbstractValue) -> None:
+        desired_pose = context.get_abstract_state(self._desired_pose_idx).get_value()
         output.set_value(desired_pose)
 
     def _initialize_discrete_state(self, context: Context, discrete_values: DiscreteValues) -> None:
@@ -236,10 +249,10 @@ class PizzaPlanner(LeafSystem):
 
         if fsm_state_value == PizzaRobotState.START:
             print("Current state: START")
-            q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
-            state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
-            print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+            # q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
+            # state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
+            # print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
+            # mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
         
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
             gripper_pose = self._solve_gripper_pose(context)
@@ -252,8 +265,8 @@ class PizzaPlanner(LeafSystem):
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
 
-            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
-            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
+            # # mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            # print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
             pass

@@ -56,8 +56,12 @@ def CreateStateMachine(
     planner = PizzaPlanner(
         num_joint_positions=10,
         initial_delay_s=1,
-        controller_plant=station.GetSubsystemByName("plant")
+        controller_plant=station.GetSubsystemByName("plant"),
     )
+
+    # plant = station.GetSubsystemByName("plant")
+    # plant_context = plant.CreateDefaultContext()
+    # print(f"within CreateFSM: {plant.GetPositions(plant_context)}")
     state_machine = builder.AddNamedSystem("planner",planner)
     
     return state_machine
@@ -106,6 +110,7 @@ def AddMobileIiwaDifferentialIK(
     )
     time_step = plant.time_step()
     q0 = plant.GetPositions(plant.CreateDefaultContext())
+    print(q0)
     params.set_nominal_joint_position(q0)
     params.set_end_effector_angular_speed_limit(2)
     params.set_end_effector_translational_velocity_limits([-2, -2, -2], [2, 2, 2])
@@ -186,6 +191,7 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     world_frame = plant.world_frame()
 
     iiwa_controller_plant = CreateIiwaControllerPlant()
+
     controller = AddMobileIiwaDifferentialIK(
         builder,
         plant=iiwa_controller_plant,
@@ -200,12 +206,13 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         )
     )
 
-    traj_source = builder.AddSystem(PoseTrajectorySource(traj))
+    if traj is not None:
+        traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
-    # builder.Connect(
-    #     traj_source.get_output_port(),
-    #     controller.get_input_port(0),
-    # )
+    builder.Connect(
+        traj_source.get_output_port(),
+        controller.get_input_port(0),
+    )
 
     # builder.Connect(
     #     station.GetOutputPort("mobile_iiwa.state_estimated"),
@@ -223,10 +230,11 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     )
 
     state_machine = CreateStateMachine(builder,station)
-    builder.Connect(
-        state_machine.get_output_port(0),
-        controller.get_input_port(0)
-    )
+    
+    # builder.Connect(
+    #     state_machine.get_output_port(0),
+    #     controller.get_input_port(0)
+    # )
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         state_machine.get_input_port(0)
