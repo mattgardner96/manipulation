@@ -267,10 +267,10 @@ class PizzaPlanner(LeafSystem):
 
         if fsm_state_value == PizzaRobotState.START:
             print("Current state: START")
-            # q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
-            # state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
-            # print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            # mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+            q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
+            state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
+            print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
+            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
         
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
             gripper_pose = self._solve_gripper_pose(context)
@@ -283,8 +283,8 @@ class PizzaPlanner(LeafSystem):
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
 
-            # # mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
-            # print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
+            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_IIWA_PAINTER)
+            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
             pass
@@ -416,7 +416,7 @@ class PizzaPlanner(LeafSystem):
         total_time = 20.0
         key_frame_poses = [X_WGinit] + compose_circular_key_frames(thetas, X_WCenter, radius)
 
-        print(meshcat)
+        # print(meshcat)
         if meshcat is not None:
             for i, frame in enumerate(key_frame_poses):
                 AddMeshcatTriad(meshcat, X_PT=frame, path="frame"+str(i))
