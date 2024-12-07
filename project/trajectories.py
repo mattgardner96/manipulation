@@ -288,7 +288,8 @@ class PizzaPlanner(LeafSystem):
         )
         mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
-        
+
+
 
         if self._is_finished:
             return
@@ -318,7 +319,9 @@ class PizzaPlanner(LeafSystem):
 
         # ----------------- FIX BASE ----------------- #
         elif fsm_state_value == PizzaRobotState.FIX_BASE:
-            self.fix_base_position(context, [0, 0, 1])
+            new_joint_lims = self.fix_base_position(context, [0, 0, 1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
             mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
             print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
         
@@ -361,7 +364,6 @@ class PizzaPlanner(LeafSystem):
         # Get mutable joint velocity limits from discrete state
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
         print("joint_velocity_limits: ", joint_velocity_limits)
-        print(f"{joint_velocity_limits.shape=}")
 
         # Initialize new joint velocity limits
         new_joint_velocity_limits = np.copy(joint_velocity_limits)
@@ -377,8 +379,10 @@ class PizzaPlanner(LeafSystem):
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
 
-        # Update the joint velocity limits in the discrete state
-        context.get_mutable_discrete_state(self._joint_velocity_limits_idx).set_value(new_joint_velocity_limits)
+
+        print(f"{new_joint_velocity_limits=}")
+
+        return new_joint_velocity_limits
     
 
     def move_base_to_location(self, context: Context):
