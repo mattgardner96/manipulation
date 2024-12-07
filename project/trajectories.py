@@ -27,6 +27,7 @@ from pydrake.all import (
     State,
 )
 import pizza_state as ps
+import time
 
 from manipulation.meshcat_utils import AddMeshcatTriad
 
@@ -273,7 +274,6 @@ class PizzaPlanner(LeafSystem):
         output.set_value(desired_pose)
 
     def _set_gripper_position(self, context: Context, output: BasicVector) -> None:
-        print(f"gripper_posn: {context.get_discrete_state(self._gripper_position_idx).get_value()}")
         output.set_value(context.get_discrete_state(self._gripper_position_idx).get_value())
 
     def _calc_joint_velocity_limits(self, context: Context, output: BasicVector) -> None:
@@ -371,7 +371,7 @@ class PizzaPlanner(LeafSystem):
             joint_vels = self.fix_base_position(context, [0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
 
-            transition_to_state(PizzaRobotState.FINISHED)
+            transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
         
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
@@ -426,10 +426,19 @@ class PizzaPlanner(LeafSystem):
 
         # ----------------- CLOSE GRIPPER ----------------- #
         elif fsm_state_value == PizzaRobotState.CLOSE_GRIPPER:
-            gripper_traj = self._close_gripper_traj(context,start_time_s=current_time)
+            start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
+            if not hasattr(self, '_gripper_traj'):
+                self._gripper_traj = self._close_gripper_traj(
+                    context,
+                    start_gripper_position=start_gripper_position,
+                    start_time_s=current_time
 
-            gripper_position = gripper_traj.value(current_time)
-            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).SetAtIndex(0, gripper_position)
+                )
+            gripper_traj = self._gripper_traj
+            # print(f"{gripper_traj=}")
+            gripper_position_desired = gripper_traj.value(current_time)
+            print(f"{gripper_position_desired=}")
+            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
             
             if current_time >= gripper_traj.end_time():
                 mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
@@ -457,7 +466,6 @@ class PizzaPlanner(LeafSystem):
 
     def fix_base_position(self, context: Context, xyz_fixed):
         tolerance = 1e-3
-
         # Get nominal joint positions
         nominal_joint_positions = context.get_discrete_state(self._nominal_joint_position_idx).get_value()
 
@@ -478,7 +486,6 @@ class PizzaPlanner(LeafSystem):
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
 
-
         return new_joint_velocity_limits
     
 
@@ -488,6 +495,34 @@ class PizzaPlanner(LeafSystem):
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
         start_time = context.get_time()
+        # Retrieve the desired pose (implementation depends on your trajectory management)
+        # For example purposes, creating dummy poses
+        X_WGinit = RigidTransform()
+        int_1 = RigidTransform(RotationMatrix(), np.array([0, 1, 1]))
+        int_2 = RigidTransform(RotationMatrix(), np.array([-4, 1, 1]))
+        goal_pose = RigidTransform(
+            R=RotationMatrix(), 
+            p=np.array(env.bowl_0) + np.array([0.25, 0, 0.25])
+        )
+        poses = PiecewisePose.MakeLinear(
+            [start_time, 
+             start_time + move_time / 4, 
+             start_time + 3 * move_time / 4, 
+             start_time + move_time],
+            [X_WGinit, int_1, int_2, goal_pose]
+        )
+        return poses
+
+    def make_traj_move_arm(
+        self,
+        context: Context,
+        start_pose,
+        end_pose,
+        start_time=None,
+        move_time=10,
+    ) -> PiecewisePose:
+        if not start_time:
+            start_time = context.get_time()
         # Retrieve the desired pose (implementation depends on your trajectory management)
         # For example purposes, creating dummy poses
         X_WGinit = RigidTransform()
@@ -573,10 +608,13 @@ class PizzaPlanner(LeafSystem):
             start_time_s=start_time_s
         )
 
-    def _close_gripper_traj(self, context: Context, start_time_s: int) -> PiecewisePolynomial:
+    def _close_gripper_traj(self, context: Context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
         # Create gripper trajectory.
-        gripper_t_lst = start_time_s + np.array([0.5, 1.0, 2.0])
-        gripper_knots = np.array([0.02, 0.02, 0.0]).reshape(1,3)
+        end_gripper_position = 0.002
+        move_time_s = 0.5
+
+        gripper_t_lst = start_time_s + np.array([0.0, move_time_s])
+        gripper_knots = np.array([start_gripper_position, end_gripper_position]).reshape(1,2)
         g_traj = PiecewisePolynomial.FirstOrderHold(gripper_t_lst, gripper_knots)
 
         return g_traj
