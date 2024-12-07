@@ -154,6 +154,7 @@ cameras:
 model_drivers = """
 model_drivers:
     mobile_iiwa: !InverseDynamicsDriver {}
+    gripper: !SchunkWsgDriver {}
 
 """  
 
