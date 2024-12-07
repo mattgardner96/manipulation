@@ -21,8 +21,13 @@ from pydrake.all import (
     PiecewisePose,
     PortSwitch,
     RigidTransform,
+    ImageDepth32F,
+    ImageRgba8U,
+    PointCloud,
     State,
 )
+import pizza_state as ps
+
 from manipulation.meshcat_utils import AddMeshcatTriad
 
 class PoseTrajectorySource(LeafSystem):
@@ -94,6 +99,7 @@ class PizzaRobotState(Enum):
     EXECUTE_PLANNED_TRAJECTORY = 4
     FINISHED = 5
     FIX_BASE = 6
+    EVAL_PIZZA_STATE = 7
 
 
 class PizzaPlanner(LeafSystem):
@@ -116,7 +122,6 @@ class PizzaPlanner(LeafSystem):
         self._fsm_state_idx = int(
             self.DeclareAbstractState(AbstractValue.Make(PizzaRobotState.START))
         )
-
         self._timing_information_idx = int(
             self.DeclareAbstractState(
                 AbstractValue.Make(
@@ -126,11 +131,9 @@ class PizzaPlanner(LeafSystem):
                 )
             )
         )
-
         self._current_iiwa_positions_idx = int(
             self.DeclareDiscreteState(num_joint_positions)
         )
-
         self._pose_trajectory_idx = int(
             self.DeclareAbstractState(
                 AbstractValue.Make(PiecewisePoseWithTimingInformation())
@@ -153,6 +156,16 @@ class PizzaPlanner(LeafSystem):
         # self._joint_centering_gains_idx = int(
         #     self.DeclareDiscreteState(num_joint_positions)
         # )
+
+        self._camera_0_depth_image_idx = int(
+            self.DeclareAbstractState(AbstractValue.Make(ImageDepth32F()))
+        )
+        self._camera_0_rgb_image_idx = int(
+            self.DeclareAbstractState(AbstractValue.Make(ImageRgba8U()))
+        )
+        self._camera_0_point_cloud_idx = int(
+            self.DeclareAbstractState(AbstractValue.Make(PointCloud()))
+        )
 
         # INPUT PORTS
         self._iiwa_state_estimated_input_port = self.DeclareVectorInputPort(
@@ -186,6 +199,19 @@ class PizzaPlanner(LeafSystem):
             AbstractValue.Make(default_gripper_pose)
         )
 
+        # ------------ CAMERA INPUT PORTS ------------ #
+        self._camera_depth_input_port = self.DeclareAbstractInputPort(
+            "camera_0.depth_image",
+            AbstractValue.Make(ImageDepth32F())
+        )
+        self._camera_rgb_input_port = self.DeclareAbstractInputPort(
+            "camera_0.rgb_image",
+            AbstractValue.Make(ImageRgba8U())
+        )
+        self._camera_ptcloud_input_port = self.DeclareAbstractInputPort(
+            "camera_0.point_cloud",
+            AbstractValue.Make(PointCloud())
+        )
 
         # OUTPUT PORTS (keep the order)
         self.DeclareAbstractOutputPort(
@@ -244,6 +270,17 @@ class PizzaPlanner(LeafSystem):
     def _calc_nominal_joint_position(self, context: Context, output: BasicVector) -> None:
         output.set_value(context.get_discrete_state(self._nominal_joint_position_idx).get_value())
 
+    def _grab_depth_image(self, context: Context) -> ImageDepth32F:
+        return context.get_abstract_state(self._camera_0_depth_image_idx).get_value()
+    
+    def _grab_rgb_image(self, context: Context) -> ImageRgba8U:
+        return context.get_abstract_state(self._camera_0_rgb_image_idx).get_value()
+
+    def _grab_point_cloud(self, context: Context) -> PointCloud:
+        point_cloud = self._camera_ptcloud_input_port.Eval(context)
+        context.get_abstract_state(self._camera_0_point_cloud_idx).set_value(point_cloud)
+        return point_cloud
+
     # def _calc_joint_centering_gains(self, context: Context, output: BasicVector) -> None:
     #     output.set_value(context.get_discrete_state(self._joint_centering_gains_idx).get_value())
   
@@ -275,9 +312,22 @@ class PizzaPlanner(LeafSystem):
         discrete_values.get_mutable_vector(self._nominal_joint_position_idx).set_value(
             self._initial_diff_ik_params.get_nominal_joint_position()
         )
+
         # discrete_values.get_mutable_vector(self._joint_centering_gains_idx).set_value(
         #     self._initial_diff_ik_params.get_joint_centering_gain()
         # )
+
+        # discrete_values.get_mutable_value(self._camera_0_depth_image_idx).set_value(
+        #     self._camera_depth_input_port.Eval(context)
+        # )
+        # discrete_values.get_mutable_value(self._camera_0_rgb_image_idx).set_value(
+        #     self._camera_rgb_input_port.Eval(context)
+        # )
+        # discrete_values.get_mutable_value(self._camera_0_point_cloud_idx).set_value(
+        #     self._camera_ptcloud_input_port.Eval(context)
+        # )
+
+        print(discrete_values)
         
 
     ###------------ STATE MACHINE LOGIC -----------###
@@ -303,7 +353,7 @@ class PizzaPlanner(LeafSystem):
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
 
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+            mutable_fsm_state.set_value(PizzaRobotState.EVAL_PIZZA_STATE)
         
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
@@ -339,6 +389,22 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
             print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
         
+
+        # ----------------- EVALUATE PIZZA STATE ----------------- #
+        elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
+            # print("Evaluating pizza state.")
+            point_cloud = self._grab_point_cloud(context)
+            print(point_cloud)
+
+            # test code
+            points = point_cloud.xyzs().T
+            print(points)
+            colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
+            area_of_pizza = ps.calculate_pizza_area(points, colors)
+            print(area_of_pizza)
+
+            mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+            print("Transitioning to FINISHED state.")
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:

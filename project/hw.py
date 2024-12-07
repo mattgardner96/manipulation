@@ -388,6 +388,22 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         state_machine.GetOutputPort("nominal_joint_position"),
         controller.GetInputPort("nominal_joint_position")
     )
+    
+    # camera ports
+    builder.Connect(
+        station.GetOutputPort("table_camera_0.depth_image"),
+        state_machine.GetInputPort("camera_0.depth_image")
+    )
+    builder.Connect(
+        station.GetOutputPort("table_camera_0.rgb_image"),
+        state_machine.GetInputPort("camera_0.rgb_image")
+    )
+    builder.Connect(
+        builder.GetSubsystemByName("table_camera_0.point_cloud").get_output_port(),
+        state_machine.GetInputPort("camera_0.point_cloud")
+    )
+
+
     # builder.Connect(
     #     state_machine.GetOutputPort("joint_centering_gains"),
     #     controller.GetInputPort("joint_centering_gains")
