@@ -289,8 +289,6 @@ class PizzaPlanner(LeafSystem):
         mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
 
-
-
         if self._is_finished:
             return
 
@@ -299,6 +297,11 @@ class PizzaPlanner(LeafSystem):
             print("Current state: START")
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
+
+            # keep the arm on the ground for now.
+            joint_vels = self.fix_base_position(context, [0, 0, 1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
+
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
             mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
         
