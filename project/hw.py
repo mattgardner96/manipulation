@@ -403,6 +403,18 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         state_machine.GetInputPort("camera_0.point_cloud")
     )
 
+    wsg_position = builder.AddSystem(ConstantVectorSource([0.1]))
+    builder.Connect(
+        wsg_position.get_output_port(),
+        station.GetInputPort("gripper.position")
+    )
+
+    # # gripper ports
+    # builder.Connect(
+    #     state_machine.GetOutputPort("gripper_position"),
+    #     station.GetInputPort("gripper.position")
+    # )
+
 
     # builder.Connect(
     #     state_machine.GetOutputPort("joint_centering_gains"),
