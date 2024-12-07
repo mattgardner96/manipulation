@@ -154,6 +154,10 @@ class PizzaPlanner(LeafSystem):
         self._nominal_joint_position_idx = int(
             self.DeclareDiscreteState(num_joint_positions)
         )
+        self._gripper_position_idx = int(
+            self.DeclareDiscreteState(1)
+        )
+
         # self._joint_centering_gains_idx = int(
         #     self.DeclareDiscreteState(num_joint_positions)
         # )
@@ -241,6 +245,12 @@ class PizzaPlanner(LeafSystem):
             num_joint_positions,
             self._calc_nominal_joint_position,
         )
+        self.DeclareVectorOutputPort(
+            "gripper_position",
+            1,
+            self._set_gripper_position
+        )
+
         # self.DeclareVectorOutputPort(
         #     "joint_centering_gains",
         #     num_joint_positions,
@@ -261,6 +271,10 @@ class PizzaPlanner(LeafSystem):
     def _set_desired_pose(self, context: Context, output: AbstractValue) -> None:
         desired_pose = context.get_abstract_state(self._desired_pose_idx).get_value()
         output.set_value(desired_pose)
+
+    def _set_gripper_position(self, context: Context, output: BasicVector) -> None:
+        print(f"gripper_posn: {context.get_discrete_state(self._gripper_position_idx).get_value()}")
+        output.set_value(context.get_discrete_state(self._gripper_position_idx).get_value())
 
     def _calc_joint_velocity_limits(self, context: Context, output: BasicVector) -> None:
         output.set_value(context.get_discrete_state(self._joint_velocity_limits_idx).get_value())
@@ -314,6 +328,8 @@ class PizzaPlanner(LeafSystem):
             self._initial_diff_ik_params.get_nominal_joint_position()
         )
 
+        discrete_values.get_mutable_vector(self._gripper_position_idx).set_value([0.107])
+
         # discrete_values.get_mutable_vector(self._joint_centering_gains_idx).set_value(
         #     self._initial_diff_ik_params.get_joint_centering_gain()
         # )
@@ -327,8 +343,6 @@ class PizzaPlanner(LeafSystem):
         # discrete_values.get_mutable_value(self._camera_0_point_cloud_idx).set_value(
         #     self._camera_ptcloud_input_port.Eval(context)
         # )
-
-        print(discrete_values)
         
 
     ###------------ STATE MACHINE LOGIC -----------###
@@ -339,6 +353,10 @@ class PizzaPlanner(LeafSystem):
         )
         mutable_fsm_state = state.get_mutable_abstract_state(self._fsm_state_idx)
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
+
+        def transition_to_state(next_state: PizzaRobotState):
+            print(f"Transitioning to {next_state} FSM state.")
+            mutable_fsm_state.set_value(next_state)
 
         if self._is_finished:
             return
@@ -353,8 +371,7 @@ class PizzaPlanner(LeafSystem):
             joint_vels = self.fix_base_position(context, [0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
 
-            print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.CLOSE_GRIPPER)
+            transition_to_state(PizzaRobotState.FINISHED)
         
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
@@ -409,9 +426,14 @@ class PizzaPlanner(LeafSystem):
 
         # ----------------- CLOSE GRIPPER ----------------- #
         elif fsm_state_value == PizzaRobotState.CLOSE_GRIPPER:
-            mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
-            print("Transitioning to FINISHED state.")
+            gripper_traj = self._close_gripper_traj(context,start_time_s=current_time)
 
+            gripper_position = gripper_traj.value(current_time)
+            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).SetAtIndex(0, gripper_position)
+            
+            if current_time >= gripper_traj.end_time():
+                mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+                print("Transitioning to FINISHED state.")
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
@@ -441,7 +463,6 @@ class PizzaPlanner(LeafSystem):
 
         # Get mutable joint velocity limits from discrete state
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
-        print("joint_velocity_limits: ", joint_velocity_limits)
 
         # Initialize new joint velocity limits
         new_joint_velocity_limits = np.copy(joint_velocity_limits)
@@ -457,8 +478,6 @@ class PizzaPlanner(LeafSystem):
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
 
-
-        print(f"{new_joint_velocity_limits=}")
 
         return new_joint_velocity_limits
     
@@ -553,3 +572,11 @@ class PizzaPlanner(LeafSystem):
             trajectory=PiecewisePose.MakeLinear(times, key_frame_poses),
             start_time_s=start_time_s
         )
+
+    def _close_gripper_traj(self, context: Context, start_time_s: int) -> PiecewisePolynomial:
+        # Create gripper trajectory.
+        gripper_t_lst = start_time_s + np.array([0.5, 1.0, 2.0])
+        gripper_knots = np.array([0.02, 0.02, 0.0]).reshape(1,3)
+        g_traj = PiecewisePolynomial.FirstOrderHold(gripper_t_lst, gripper_knots)
+
+        return g_traj
