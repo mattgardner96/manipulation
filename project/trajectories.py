@@ -435,7 +435,7 @@ class PizzaPlanner(LeafSystem):
 
                 )
             gripper_traj = self._gripper_traj
-            # print(f"{gripper_traj=}")
+
             gripper_position_desired = gripper_traj.value(current_time)
             print(f"{gripper_position_desired=}")
             state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
@@ -611,6 +611,17 @@ class PizzaPlanner(LeafSystem):
     def _close_gripper_traj(self, context: Context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
         # Create gripper trajectory.
         end_gripper_position = 0.002
+        move_time_s = 0.5
+
+        gripper_t_lst = start_time_s + np.array([0.0, move_time_s])
+        gripper_knots = np.array([start_gripper_position, end_gripper_position]).reshape(1,2)
+        g_traj = PiecewisePolynomial.FirstOrderHold(gripper_t_lst, gripper_knots)
+
+        return g_traj
+
+    def _open_gripper_traj(self, context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
+        # Create gripper trajectory.
+        end_gripper_position = 0.1
         move_time_s = 0.5
 
         gripper_t_lst = start_time_s + np.array([0.0, move_time_s])
