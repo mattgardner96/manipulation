@@ -13,6 +13,7 @@ from pydrake.all import (
     Diagram,
     DiagramBuilder,
     DiscreteValues,
+    DifferentialInverseKinematicsParameters,
     InputPortIndex,
     LeafSystem,
     MultibodyPlant,
@@ -45,46 +46,6 @@ class PoseTrajectorySource(LeafSystem):
         pose = self._pose_trajectory.GetPose(context.get_time())
         # print(f"Pose dimensions: {pose.GetAsVector().size()}")
         output.set_value(pose)
-
-# def traj_linear_move_to_bowl_0(
-#         diagram,
-#         context=None,
-#         move_time=10 # seconds
-#     ) -> PoseTrajectorySource:
-#     if context is None:
-#         context = diagram.CreateDefaultContext()
-
-#     start_time = context.get_time()
-
-#     # get a starting point
-#     X_WGinit = hw.get_X_WG(diagram,context)
-
-#     # intermediate #1
-#     int_1 = hw.RigidTransform(
-#         R=hw.RotationMatrix(),
-#         p=np.array([0,1,1])
-#     )
-
-#     # intermediate #2
-#     int_2 = hw.RigidTransform(
-#         R=hw.RotationMatrix(),
-#         p=np.array([-4,1,1])
-#     )
-
-#     # define a goal pose
-#     goal_pose = hw.RigidTransform(
-#         R=hw.RotationMatrix(),
-#         p=np.array(env.bowl_0) + np.array([0.25, 0, 0.25])
-#     )
-
-#     poses = hw.PiecewisePose.MakeLinear([start_time,
-#         start_time + move_time/4,
-#         start_time + 3*move_time/4,
-#         start_time + move_time],
-#         [X_WGinit, int_1, int_2, goal_pose])
-
-#     return poses
-
 
 @dataclass
 class TrajectoryWithTimingInformation:
@@ -138,7 +99,8 @@ class PizzaPlanner(LeafSystem):
     def __init__(self, 
         num_joint_positions: int,
         initial_delay_s: int,
-        controller_plant: MultibodyPlant
+        controller_plant: MultibodyPlant,
+        diff_ik_controller: Diagram
     ):
         super().__init__()
         self._is_finished = False
@@ -148,11 +110,11 @@ class PizzaPlanner(LeafSystem):
         self._gripper_body_index = gripper_body.index()
 
         plant_context = self._iiwa_plant.CreateDefaultContext()
-        # print(f"within planner: {self._iiwa_plant.GetPositions(plant_context)}")
 
         self._fsm_state_idx = int(
             self.DeclareAbstractState(AbstractValue.Make(PizzaRobotState.START))
         )
+
         self._timing_information_idx = int(
             self.DeclareAbstractState(
                 AbstractValue.Make(
@@ -169,6 +131,23 @@ class PizzaPlanner(LeafSystem):
             self.DeclareAbstractState(
                 AbstractValue.Make(PiecewisePoseWithTimingInformation())
             )
+        )
+
+        # Initialize diff_ik_params
+        self._diff_ik_params = diff_ik_controller.GetSubsystemByName("integrator").get_parameters()
+        
+        # diff ik control params
+        self._joint_velocity_limits_idx = int(
+            self.DeclareDiscreteState(len(self._diff_ik_params.get_joint_velocity_limits()))
+        )
+        self._ee_velocity_limits_idx = int(
+            self.DeclareDiscreteState(len(self._diff_ik_params.get_end_effector_translational_velocity_limits()))
+        )
+        self._nominal_joint_position_idx = int(
+            self.DeclareDiscreteState(len(self._diff_ik_params.get_nominal_joint_position()))
+        )
+        self._joint_centering_gains_idx = int(
+            self.DeclareDiscreteState(len(self._diff_ik_params.get_joint_centering_gain()))
         )
 
         # INPUT PORTS
@@ -199,27 +178,42 @@ class PizzaPlanner(LeafSystem):
             gripper_frame
         )
 
-        # print(f"{default_gripper_pose=}")
-
         self._desired_pose_idx = self.DeclareAbstractState(
             AbstractValue.Make(default_gripper_pose)
         )
 
-        # OUTPUT PORTS (remain the same)
+
+        # OUTPUT PORTS (keep the order)
         self.DeclareAbstractOutputPort(
             "desired_pose",
             alloc=lambda: AbstractValue.Make(RigidTransform()),
             calc=self._set_desired_pose
         )
 
-        self.DeclareVectorOutputPort(
-            "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
-        )
+        # TODO: remove this output port if we don't need?
+        # self.DeclareVectorOutputPort(
+        #     "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
+        # )
 
-        self.DeclareAbstractOutputPort(
-            "reset_diff_ik",
-            lambda: AbstractValue.Make(False),
-            self._calc_diff_ik_reset,
+        self.DeclareVectorOutputPort(
+            "joint_velocity_limits",
+            2 * num_joint_positions,
+            self._calc_joint_velocity_limits,
+        )
+        self.DeclareVectorOutputPort(
+            "ee_velocity_limits",
+            6,
+            self._calc_ee_velocity_limits,
+        )
+        self.DeclareVectorOutputPort(
+            "nominal_joint_position",
+            num_joint_positions,
+            self._calc_nominal_joint_position,
+        )
+        self.DeclareVectorOutputPort(
+            "joint_centering_gains",
+            num_joint_positions,
+            self._calc_joint_centering_gains,
         )
 
         self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
@@ -231,29 +225,44 @@ class PizzaPlanner(LeafSystem):
 
     def _solve_gripper_pose(self, context: Context) -> RigidTransform:
         body_poses = self._body_poses_input_port.Eval(context)
-        gripper_pose = body_poses[self._gripper_body_index]
-        
-        return gripper_pose
+        return body_poses[self._gripper_body_index]
 
     def _set_desired_pose(self, context: Context, output: AbstractValue) -> None:
         desired_pose = context.get_abstract_state(self._desired_pose_idx).get_value()
         output.set_value(desired_pose)
 
-    def _calc_diff_ik_reset(self, context: Context, output: AbstractValue) -> None:
-        # credit: used with permission from Nicholas.
-        """Logic for deciding when to reset the differential IK controller state."""
-        state = context.get_abstract_state(int(self._fsm_state_idx)).get_value()
-        if state == PizzaRobotState.PLAN_IIWA_PAINTER:
-            # Need to reset before executing a trajectory.
-            output.set_value(True)
-        else:
-            output.set_value(False)
+    def _calc_joint_velocity_limits(self, context: Context, output: BasicVector) -> None:
+        output.set_value(context.get_discrete_state(self._joint_velocity_limits_idx).get_value())
+
+    def _calc_ee_velocity_limits(self, context: Context, output: BasicVector) -> None:
+        output.set_value(context.get_discrete_state(self._ee_velocity_limits_idx).get_value())
+    
+    def _calc_nominal_joint_position(self, context: Context, output: BasicVector) -> None:
+        output.set_value(context.get_discrete_state(self._nominal_joint_position_idx).get_value())
+
+    def _calc_joint_centering_gains(self, context: Context, output: BasicVector) -> None:
+        output.set_value(context.get_discrete_state(self._joint_centering_gains_idx).get_value())
+    
+    # TODO: probably dead for now
+    # def _calc_diff_ik_reset(self, context: Context, output: AbstractValue) -> None:
+    #     # credit: used with permission from Nicholas.
+    #     """Logic for deciding when to reset the differential IK controller state."""
+    #     state = context.get_abstract_state(int(self._fsm_state_idx)).get_value()
+    #     if state == PizzaRobotState.PLAN_IIWA_PAINTER:
+    #         # Need to reset before executing a trajectory.
+    #         output.set_value(True)
+    #     else:
+    #         output.set_value(False)
 
     # init function
     def _initialize_discrete_state(self, context: Context, discrete_values: DiscreteValues) -> None:
         discrete_values.set_value(
             self._current_iiwa_positions_idx,
             self._iiwa_state_estimated_input_port.Eval(context)[:10],
+            self._joint_velocity_limits_idx,
+            self._ee_velocity_limits_idx,
+            self._nominal_joint_position_idx,
+            self._joint_centering_gains_idx
         )
 
     ###------------ STATE MACHINE LOGIC -----------###
@@ -274,23 +283,23 @@ class PizzaPlanner(LeafSystem):
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.PLAN_IIWA_PAINTER)
+            mutable_fsm_state.set_value(PizzaRobotState.PLAN_TRAJ_0)
         
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
             gripper_pose = self._solve_gripper_pose(context)
-
             pose_traj = self._create_painter_traj(
                 gripper_pose,
                 start_time_s=timing_information.start_iiwa_painter,
                 context=context
             )
-
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
 
             mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
             print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
+
+        # ----------------- MOVE BASE TO LOCATION ----------------- #
 
 
         # ----------------- PLAN TRAJECTORY_0 ----------------- #
@@ -301,7 +310,7 @@ class PizzaPlanner(LeafSystem):
             )
             mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
             print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
-            
+        
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
@@ -351,6 +360,12 @@ class PizzaPlanner(LeafSystem):
             #         state.get_mutable_discrete_state().get_mutable_vector(
             #             self._current_iiwa_positions_idx
             #         ).set_value(initial_pose.translation())
+
+    def fix_base_position(self, context: Context):
+        pass
+    
+    def move_base_to_location(self, context: Context):
+        pass
 
 
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
