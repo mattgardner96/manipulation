@@ -100,6 +100,7 @@ class PizzaRobotState(Enum):
     FINISHED = 5
     FIX_BASE = 6
     EVAL_PIZZA_STATE = 7
+    CLOSE_GRIPPER = 8
 
 
 class PizzaPlanner(LeafSystem):
@@ -353,7 +354,7 @@ class PizzaPlanner(LeafSystem):
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
 
             print("Transitioning to PLAN_IIWA_PAINTER FSM state.")
-            mutable_fsm_state.set_value(PizzaRobotState.EVAL_PIZZA_STATE)
+            mutable_fsm_state.set_value(PizzaRobotState.CLOSE_GRIPPER)
         
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
@@ -405,6 +406,12 @@ class PizzaPlanner(LeafSystem):
 
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
+
+        # ----------------- CLOSE GRIPPER ----------------- #
+        elif fsm_state_value == PizzaRobotState.CLOSE_GRIPPER:
+            mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+            print("Transitioning to FINISHED state.")
+
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
@@ -419,6 +426,8 @@ class PizzaPlanner(LeafSystem):
                 print("Transitioning to FINISHED state.")
                 mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
 
+
+        # ----------------- FINISHED ----------------- #
         elif fsm_state_value == PizzaRobotState.FINISHED:
             self._is_finished = True
             print("Task is finished.")
