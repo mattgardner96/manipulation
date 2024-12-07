@@ -143,7 +143,7 @@ def AddMobileIiwaDifferentialIK(
             self.DeclareVectorInputPort("joint_velocity_limits", 2 * num_positions)
             self.DeclareVectorInputPort("ee_velocity_limits", 6)
             self.DeclareVectorInputPort("nominal_joint_position", num_positions)
-            self.DeclareVectorInputPort("joint_centering_gains", num_positions)
+            # self.DeclareVectorInputPort("joint_centering_gains", num_positions)
 
             # Declare periodic update to refresh parameters
             self.DeclarePeriodicUnrestrictedUpdateEvent(
@@ -170,8 +170,8 @@ def AddMobileIiwaDifferentialIK(
             params.set_nominal_joint_position(nominal_joint_position)
 
             # Update joint centering gains
-            joint_centering_gains = self.get_input_port(3).Eval(context)
-            params.set_joint_centering_gain(np.diag(joint_centering_gains))
+            # joint_centering_gains = self.get_input_port(3).Eval(context)
+            # params.set_joint_centering_gain(np.diag(joint_centering_gains))
 
     # Add the ParameterUpdater to the diagram
     parameter_updater = diff_ik_builder.AddSystem(
@@ -181,7 +181,7 @@ def AddMobileIiwaDifferentialIK(
     diff_ik_builder.ExportInput(parameter_updater.get_input_port(0), "joint_velocity_limits")
     diff_ik_builder.ExportInput(parameter_updater.get_input_port(1), "ee_velocity_limits")
     diff_ik_builder.ExportInput(parameter_updater.get_input_port(2), "nominal_joint_position")
-    diff_ik_builder.ExportInput(parameter_updater.get_input_port(3), "joint_centering_gains")
+    # diff_ik_builder.ExportInput(parameter_updater.get_input_port(3), "joint_centering_gains")
 
     # Export the input ports
     diff_ik_builder.ExportInput(
@@ -376,6 +376,22 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         station.GetOutputPort("body_poses"),
         state_machine.GetInputPort("body_poses")
     )
+    builder.Connect(
+        state_machine.GetOutputPort("joint_velocity_limits"),
+        controller.GetInputPort("joint_velocity_limits")
+    )
+    builder.Connect(
+        state_machine.GetOutputPort("ee_velocity_limits"),
+        controller.GetInputPort("ee_velocity_limits")
+    )
+    builder.Connect(
+        state_machine.GetOutputPort("nominal_joint_position"),
+        controller.GetInputPort("nominal_joint_position")
+    )
+    # builder.Connect(
+    #     state_machine.GetOutputPort("joint_centering_gains"),
+    #     controller.GetInputPort("joint_centering_gains")
+    # )
 
     return builder, station
 
