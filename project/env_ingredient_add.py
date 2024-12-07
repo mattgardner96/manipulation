@@ -1,7 +1,7 @@
 import numpy as np
 
-NUM_MUSHROOMS = 20
-NUM_TOMATOES = 20
+NUM_MUSHROOMS = 30
+NUM_TOMATOES = 30
 bowl_0 = [-3, 0.5, 0.73]
 bowl_1 = [-3, 1, 0.73]
 bowl_2 = [-3, 1.5, 0.73]
@@ -79,41 +79,18 @@ initial_scene = """
         mixing_bowl_body_link:
             translation: """+str(bowl_2)+"""
             rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
-        
-- add_model:
-    name: table0
-    file: package://pizzabot/objects/table.sdf
 
 - add_model:
     name: table1
     file: package://pizzabot/objects/table.sdf
 
-- add_model:
-    name: camera0
-    file: package://manipulation/camera_box.sdf
 
-- add_frame:
-    name: camera_table_above
-    X_PF:
-        base_frame: table0::table
-        rotation: !Rpy { deg: [180.0, 0.0, 0.0]}
-        translation: [0., 0., 1.5]
-
-- add_weld:
-    parent: camera_table_above
-    child: camera0::base
     
 - add_weld:
     parent: panV1
     child: za1::za
     X_PC:
       translation: [0, 0, 0.01]
-
-- add_weld:
-    parent: world
-    child: table0::table
-    X_PC:
-      translation: [-1, -0.5, -0.015]
 
 - add_weld:
     parent: world
@@ -137,6 +114,32 @@ initial_scene = """
       rotation: !Rpy { deg: [90.0, 0.0, 0.0 ]}
 
 
+"""
+
+camera_model = """
+- add_model:
+    name: camera0
+    file: package://manipulation/camera_box.sdf
+- add_model:
+    name: table0
+    file: package://pizzabot/objects/table.sdf
+
+- add_weld:
+    parent: world
+    child: table0::table
+    X_PC:
+      translation: [-1, -0.5, -0.015]
+      
+- add_frame:
+    name: camera_table_above
+    X_PF:
+        base_frame: table0::table
+        rotation: !Rpy { deg: [180.0, 0.0, 0.0]}
+        translation: [0., 0., 1.5]
+
+- add_weld:
+    parent: camera_table_above
+    child: camera0::base
 """
 
 camera = """
@@ -234,12 +237,15 @@ def add_tomato(scenario_data):
 def get_environment_set_up(no_scene=False,include_driver=True):
 
     scenario_data = robot_only
+    scenario_data += camera_model
+
     if (no_scene is False):
         scenario_data += initial_scene
         scenario_data = add_mushroom(scenario_data)
         scenario_data = add_tomato(scenario_data)
 
     scenario_data += camera
+    
     if include_driver:
         scenario_data += model_drivers
     
