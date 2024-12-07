@@ -49,7 +49,159 @@ importlib.reload(env_ingredient_add)
 import trajectories
 from trajectories import PizzaPlanner, PizzaRobotState
 
+class DiffIKWithParams(LeafSystem):
+    def __init__():
+        LeafSystem.__init__(self)
+        builder = DiagramBuilder()
 
+        diff_ik = builder.AddNamedSystem(
+            "diff_ik_integrator",
+            DifferentialInverseKinematicsIntegrator(
+                plant,
+                frame,
+                time_step,
+                params,
+                log_only_when_result_state_changes=True,
+            )
+        )
+
+        self._params_input_port = self._DeclareAbstractInputPort(
+            "params_in", AbstractValue.Make(DifferentialInverseKinematicsParameters())
+        )
+
+        self._params_output_port = self._DeclareAbstractOutputPort(
+            "params_out", AbstractValue.Make(DifferentialInverseKinematicsParameters())
+        )
+
+        builder.ExportOutput(diff_ik.get_output_port(), "output")
+
+def AddMobileIiwaDifferentialIK(
+    builder: DiagramBuilder, plant: MultibodyPlant, frame: Frame = None
+) -> DifferentialInverseKinematicsIntegrator:
+    """
+    Args:
+        builder: The DiagramBuilder to which the system should be added.
+
+        plant: The MultibodyPlant passed to the DifferentialInverseKinematicsIntegrator.
+
+        frame: The frame to use for the end effector command. Defaults to the body
+            frame of "iiwa_link_7". NOTE: This must be present in the controller plant!
+
+    Returns:
+        The DifferentialInverseKinematicsIntegrator system with parameter input port.
+    """
+
+    assert plant.num_positions() == 10
+
+    # Create default parameters
+    params = DifferentialInverseKinematicsParameters(
+        plant.num_positions(), plant.num_velocities()
+    )
+    time_step = plant.time_step()
+    q0 = plant.GetPositions(plant.CreateDefaultContext())
+    params.set_nominal_joint_position(q0)
+    params.set_end_effector_angular_speed_limit(2)
+    params.set_end_effector_translational_velocity_limits([-2, -2, -2], [2, 2, 2])
+
+    if frame is None:
+        frame = plant.GetFrameByName("iiwa_link_7")
+
+    mobile_iiwa_velocity_limits = np.array(
+        [0.5, 0.5, 0.5, 1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3]
+    )
+    params.set_joint_velocity_limits(
+        (-mobile_iiwa_velocity_limits, mobile_iiwa_velocity_limits)
+    )
+    params.set_joint_centering_gain(10 * np.eye(10))
+
+    # Create a sub-builder to build the diagram
+    diff_ik_builder = DiagramBuilder()
+
+    # Add the DifferentialInverseKinematicsIntegrator system
+    differential_ik = diff_ik_builder.AddNamedSystem(
+        "integrator",
+        DifferentialInverseKinematicsIntegrator(
+            plant,
+            frame,
+            time_step,
+            params,
+            log_only_when_result_state_changes=True,
+        )
+    )
+
+    # we can't pass DifferentialInverseKinematicsParameters through a port in the system.
+    # so I need to pass through the values of the parameters directly as vectors 
+    # and update them in the system.
+    # Define a system to update parameters from vector inputs
+    class ParameterUpdater(LeafSystem):
+        def __init__(self, diff_ik_system, num_positions, time_step):
+            super().__init__()
+            self._diff_ik_system = diff_ik_system
+            self._num_positions = num_positions
+
+            # Declare vector input ports for parameters
+            self.DeclareVectorInputPort("joint_velocity_limits", 2 * num_positions)
+            self.DeclareVectorInputPort("ee_velocity_limits", 6)
+            self.DeclareVectorInputPort("nominal_joint_position", num_positions)
+            self.DeclareVectorInputPort("joint_centering_gains", num_positions)
+
+            # Declare periodic update to refresh parameters
+            self.DeclarePeriodicUnrestrictedUpdateEvent(
+                period_sec=time_step, offset_sec=0.0, update=self.UpdateParameters)
+
+        def UpdateParameters(self, context, state):
+            # Get the mutable parameters from the differential IK system
+            params = self._diff_ik_system.get_mutable_parameters()
+
+            # Update joint velocity limits
+            joint_velocity_limits = self.get_input_port(0).Eval(context)
+            n = self._num_positions
+            lower_limits = joint_velocity_limits[:n]
+            upper_limits = joint_velocity_limits[n:]
+            params.set_joint_velocity_limits((lower_limits, upper_limits))
+
+            # Update end-effector velocity limits
+            ee_velocity_limits = self.get_input_port(1).Eval(context)
+            params.set_end_effector_translational_velocity_limits(
+                ee_velocity_limits[:3], ee_velocity_limits[3:])
+
+            # Update nominal joint positions
+            nominal_joint_position = self.get_input_port(2).Eval(context)
+            params.set_nominal_joint_position(nominal_joint_position)
+
+            # Update joint centering gains
+            joint_centering_gains = self.get_input_port(3).Eval(context)
+            params.set_joint_centering_gain(np.diag(joint_centering_gains))
+
+    # Add the ParameterUpdater to the diagram
+    parameter_updater = diff_ik_builder.AddSystem(
+        ParameterUpdater(differential_ik, plant.num_positions(), time_step))
+
+    # Export the parameter inputs as input ports
+    diff_ik_builder.ExportInput(parameter_updater.get_input_port(0), "joint_velocity_limits")
+    diff_ik_builder.ExportInput(parameter_updater.get_input_port(1), "ee_velocity_limits")
+    diff_ik_builder.ExportInput(parameter_updater.get_input_port(2), "nominal_joint_position")
+    diff_ik_builder.ExportInput(parameter_updater.get_input_port(3), "joint_centering_gains")
+
+    # Export the input ports
+    diff_ik_builder.ExportInput(
+        differential_ik.GetInputPort("robot_state"), "robot_state"
+    )
+    diff_ik_builder.ExportInput(
+        differential_ik.GetInputPort("X_AE_desired"), "X_AE_desired"
+    )
+
+    # Export the output port
+    diff_ik_builder.ExportOutput(differential_ik.get_output_port(), "joint_positions")
+
+    # Build the diagram
+    diff_ik_diagram = diff_ik_builder.Build()
+    diff_ik_diagram.set_name("diff_ik_with_params")
+
+    # Add the diagram to the main builder
+    diff_ik_system = builder.AddSystem(diff_ik_diagram)
+
+    return diff_ik_system
 
 def CreateStateMachine(
     builder: DiagramBuilder, station, frame: Frame = None
@@ -58,6 +210,7 @@ def CreateStateMachine(
         num_joint_positions=10,
         initial_delay_s=1,
         controller_plant=station.GetSubsystemByName("plant"),
+        diff_ik_controller=builder.GetSubsystemByName("diff_ik_with_params"),
     )
 
     # plant = station.GetSubsystemByName("plant")
@@ -88,55 +241,6 @@ def CreateIiwaControllerPlant():
     plant_robot.mutable_gravity_field().set_gravity_vector([0, 0, 0])
     plant_robot.Finalize()
     return plant_robot
-
-def AddMobileIiwaDifferentialIK(
-    builder: DiagramBuilder, plant: MultibodyPlant, frame: Frame = None
-) -> DifferentialInverseKinematicsIntegrator:
-    """
-    Args:
-        builder: The DiagramBuilder to which the system should be added.
-
-        plant: The MultibodyPlant passed to the DifferentialInverseKinematicsIntegrator.
-
-        frame: The frame to use for the end effector command. Defaults to the body
-            frame of "iiwa_link_7". NOTE: This must be present in the controller plant!
-
-    Returns:
-        The DifferentialInverseKinematicsIntegrator system.
-    """
-    assert plant.num_positions() == 10
-    
-    params = DifferentialInverseKinematicsParameters(
-        plant.num_positions(), plant.num_velocities()   
-    )
-    time_step = plant.time_step()
-    q0 = plant.GetPositions(plant.CreateDefaultContext())
-    params.set_nominal_joint_position(q0)
-    params.set_end_effector_angular_speed_limit(2)
-    params.set_end_effector_translational_velocity_limits([-2, -2, -2], [2, 2, 2])
-
-    if frame is None:
-        frame = plant.GetFrameByName("iiwa_link_7")
-        
-
-    mobile_iiwa_velocity_limits = np.array([0.5, 0.5, 0.5, 1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3])
-    params.set_joint_velocity_limits(
-        (-mobile_iiwa_velocity_limits, mobile_iiwa_velocity_limits)
-    )
-    params.set_joint_centering_gain(10 * np.eye(10))
-    
-    differential_ik = builder.AddNamedSystem(
-        "diff_ik_integrator",
-        DifferentialInverseKinematicsIntegrator(
-            plant,
-            frame,
-            time_step,
-            params,
-            log_only_when_result_state_changes=True,
-        )
-    )
-    return differential_ik
-
 
 def diff_ik_solver(J_G, V_G_desired, q_now, v_now, p_now):
     num_positions = 10
@@ -257,13 +361,13 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     point_cloud = Add_Camera_Point_Cloud(meshcat,scenario, builder,station)  
 
-
     state_machine = CreateStateMachine(builder,station)
     
     builder.Connect(
-        state_machine.get_output_port(0),
-        controller.get_input_port(0)
+        state_machine.GetOutputPort("desired_pose"),
+        controller.GetInputPort("X_AE_desired")
     )
+
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         state_machine.get_input_port(0)
