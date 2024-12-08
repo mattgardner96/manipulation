@@ -371,7 +371,7 @@ class PizzaPlanner(LeafSystem):
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
 
         def transition_to_state(next_state: PizzaRobotState):
-            print(f"Transitioning to {next_state} FSM state.")
+            #print(f"Transitioning to {next_state} FSM state.")
             mutable_fsm_state.set_value(next_state)
 
         if self._is_finished:
@@ -379,7 +379,7 @@ class PizzaPlanner(LeafSystem):
 
         # ----------------- START ----------------- #
         if fsm_state_value == PizzaRobotState.START:
-            print("Current state: START")
+            #print("Current state: START")
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
 
@@ -391,7 +391,8 @@ class PizzaPlanner(LeafSystem):
             # is_locked_vels = self.set_arm_locked(context, False)
             # state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, is_locked_vels)
 
-            transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
+            if current_time >= 1.0:
+                transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
@@ -438,40 +439,6 @@ class PizzaPlanner(LeafSystem):
 
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
-
-
-        # ----------------- CLOSE GRIPPER ----------------- #
-        elif fsm_state_value == PizzaRobotState.CLOSE_GRIPPER:
-            start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
-            
-            # runs this once, 
-            if not hasattr(self, '_gripper_traj'):
-                self._gripper_traj = self._close_gripper_traj(context,start_gripper_position,current_time)
-            gripper_traj = self._gripper_traj
-
-            gripper_position_desired = gripper_traj.value(current_time)
-            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
-            
-            if current_time >= gripper_traj.end_time():
-                del(self._gripper_traj)
-                transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
-
-        # ----------------- OPEN GRIPPER ----------------- #
-        elif fsm_state_value == PizzaRobotState.OPEN_GRIPPER:
-            start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
-            if not hasattr(self, '_gripper_traj'):
-                self._gripper_traj = self._open_gripper_traj(
-                    context,
-                    start_gripper_position,
-                    start_time_s=current_time) # start immediately on state transition
-            gripper_traj = self._gripper_traj
-
-            gripper_position_desired = gripper_traj.value(current_time)
-            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
-            
-            if current_time >= gripper_traj.end_time():
-                del(self._gripper_traj)
-                transition_to_state(PizzaRobotState.FINISHED)
 
         # ----------------- PLAN MOVE TO BOWL 0 ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_MOVE_TO_BOWL_0:
@@ -699,6 +666,11 @@ class PizzaPlanner(LeafSystem):
             start_time_s=start_time_s
         )
 
+
+
+
+#HELPER FUNCTIONS 
+
     def _close_gripper_traj(self, context: Context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
         # Create gripper trajectory.
         end_gripper_position = 0.002
@@ -720,3 +692,32 @@ class PizzaPlanner(LeafSystem):
         g_traj = PiecewisePolynomial.FirstOrderHold(gripper_t_lst, gripper_knots)
 
         return g_traj
+
+
+    def gripper_action(self,context,current_time, state, action):
+        start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
+
+        #if trajectory does not exist, make it, else execute next time step
+        if not hasattr(self, '_gripper_traj') and action == "close":
+            self._gripper_traj = self._close_gripper_traj(context, start_gripper_position, current_time)
+        
+        if not hasattr(self, '_gripper_traj') and action == "open":
+            self._gripper_traj = self._open_gripper_traj(context, start_gripper_position, current_time)
+        
+        gripper_traj = self._gripper_traj
+    
+        while current_time < gripper_traj.end_time():
+            gripper_position_desired = gripper_traj.value(current_time)
+
+            #Update Gripper position    
+            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
+            return False
+            
+        del(self._gripper_traj)
+        return True
+
+#example use of function in other states: 
+# if self.gripper_action(context,current_time, state, "close") == True:
+#     transition_to_state(PizzaRobotState.FINISHED)
+
+
