@@ -219,7 +219,7 @@ class PizzaPlanner(LeafSystem):
         )
 
         self._control_mode_idx = self.DeclareAbstractState(
-            AbstractValue.Make(InputPortIndex(0))
+            AbstractValue.Make(InputPortIndex(1))
         )
 
         # ------------ CAMERA INPUT PORTS ------------ #
@@ -272,7 +272,7 @@ class PizzaPlanner(LeafSystem):
 
         self.DeclareAbstractOutputPort(
             "control_mode", 
-            lambda: AbstractValue.Make(InputPortIndex(0)),
+            lambda: AbstractValue.Make(InputPortIndex(1)),
             self._calc_control_mode
         )
 
@@ -293,7 +293,7 @@ class PizzaPlanner(LeafSystem):
         mode = context.get_abstract_state(self._control_mode_idx).get_value()
         if not isinstance(mode, InputPortIndex):
             print("how this happen")
-            mode = InputPortIndex(0)  # Default to joint trajectory following
+            mode = InputPortIndex(1)  # Default to joint trajectory following
         output.set_value(mode)
 
     def _set_iiwa_positions(self, context: Context, output: BasicVector) -> None:
@@ -353,7 +353,7 @@ class PizzaPlanner(LeafSystem):
 
         discrete_values.get_mutable_vector(self._gripper_position_idx).set_value([0.107])
 
-        context.get_mutable_abstract_state(self._control_mode_idx).set_value(InputPortIndex(0))
+        context.get_mutable_abstract_state(self._control_mode_idx).set_value(InputPortIndex(1))
 
         # discrete_values.get_mutable_vector(self._joint_centering_gains_idx).set_value(
         #     self._initial_diff_ik_params.get_joint_centering_gain()
