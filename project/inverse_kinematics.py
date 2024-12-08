@@ -40,7 +40,7 @@ def solve_global_inverse_kinematics(
         IK solution could be found.
     """
     ik = InverseKinematics(plant)
-    q_variables = ik.q()
+    q_variables = ik.q()[:12]
 
     gripper_frame = plant.GetFrameByName(gripper_frame_name)
 
@@ -54,6 +54,8 @@ def solve_global_inverse_kinematics(
         p_AQ_upper=p_G_ref + position_tolerance,
     )
 
+    ik.AddLinearEqualityConstraint(q_variables[2], initial_guess[2])
+
     # Orientation constraint
     R_G_ref = X_G.rotation()
     ik.AddOrientationConstraint(
@@ -65,6 +67,8 @@ def solve_global_inverse_kinematics(
     )
 
     prog = ik.prog()
+    # print(f"{q_variables.shape=}")
+    # print(f"{initial_guess.shape=}")
     prog.SetInitialGuess(q_variables, initial_guess)
 
     result = Solve(prog)

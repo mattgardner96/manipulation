@@ -103,6 +103,7 @@ class PizzaRobotState(Enum):
     MOVE_TO_BOWL_1 = 5
     EXECUTE_PLANNED_TRAJECTORY_1 = 6
     TEST_IK_MOVE = 7
+    PROX_MOVE_TO_BOWL_1 = 8
 
 
 class PizzaPlanner(LeafSystem):
@@ -381,7 +382,7 @@ class PizzaPlanner(LeafSystem):
         fsm_state_value: PizzaRobotState = context.get_abstract_state(self._fsm_state_idx).get_value()
 
         def transition_to_state(next_state: PizzaRobotState):
-            #print(f"Transitioning to {next_state} FSM state.")
+            print(f"Transitioning to {next_state} FSM state.")
             mutable_fsm_state.set_value(next_state)
 
         if self._is_finished:
@@ -410,11 +411,27 @@ class PizzaPlanner(LeafSystem):
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
             goal_pose = RigidTransform(
                 R=curr_pose.rotation(),
-                p=env.bowl_0 + np.array([0.5, 0, 0.3])
+                p=env.bowl_1 + np.array([0.1, 0, 0.4])
             )
 
             if self._ik_move_to_posn(context, state, goal_pose) == False:
                 return
+            
+            transition_to_state(PizzaRobotState.FINISHED)
+
+        elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
+            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+            goal_pose = RigidTransform(
+                R=curr_pose.rotation(),
+                p=env.bowl_1 + np.array([0.1, 0, 0.2])
+            )
+
+            if self._ik_move_to_posn(context, state, goal_pose) == False:
+                return
+
+            # close gripper
+            if self.gripper_action(context, current_time, state, "close") == True:
+                transition_to_state(PizzaRobotState.FINISHED)
 
             # gets stuck replanning the second move.
             # goal_pose = RigidTransform(
