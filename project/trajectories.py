@@ -391,10 +391,9 @@ class PizzaPlanner(LeafSystem):
         if fsm_state_value == PizzaRobotState.START:
             #print("Current state: START")
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
-            state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
+            state.get_mutable_discrete_state().set_value(self._iiwa_positions_idx, q_current)
 
-            print("set port selector")
-            state.get_mutable_abstract_state(self._control_mode_idx).set_value(InputPortIndex(1)) # set to diffIK mode
+            # state.get_mutable_abstract_state(self._control_mode_idx).set_value(InputPortIndex(1)) # set to diffIK mode
 
             # keep the robot on the ground for now.
             new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
@@ -721,13 +720,12 @@ class PizzaPlanner(LeafSystem):
             return False
 
     def _ik_move_to_posn(self, context: Context, state: State, goal_pose: RigidTransform):
-
         if not hasattr(self, '_joint_traj'):
             # Compute the current and goal joint positions
-            q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
+            q_current = np.append(self._iiwa_state_estimated_input_port.Eval(context)[:10],np.zeros(2))
             q_goal = solve_global_inverse_kinematics(
                 plant=self._iiwa_plant,
-                X_G_goal=goal_pose,
+                X_G=goal_pose,
                 initial_guess=q_current,
                 position_tolerance=0.0,
                 orientation_tolerance=0.0,
@@ -740,17 +738,18 @@ class PizzaPlanner(LeafSystem):
 
             # Create a joint trajectory from current to goal positions
             move_time = 2.0  # Duration of the movement in seconds
-            times = [context.get_time(), context.get_time() + move_time]
-            knots = np.vstack([q_current, q_goal])
+            current_time = context.get_time()
+            times = [current_time, current_time + move_time]
+            knots = np.column_stack((q_current, q_goal))
             self._joint_traj = PiecewisePolynomial.FirstOrderHold(times, knots)
-            self._joint_traj_start_time = context.get_time()
+            self._joint_traj_start_time = current_time
             return False  # Trajectory created, movement not yet completed
 
         # Execute the trajectory
         elapsed_time = context.get_time() - self._joint_traj_start_time
         if elapsed_time <= self._joint_traj.end_time():
             q_desired = self._joint_traj.value(elapsed_time).flatten()
-            state.get_mutable_discrete_state(self._iiwa_positions_idx).set_value(q_desired)
+            state.get_mutable_discrete_state(self._iiwa_positions_idx).set_value(q_desired[:10])
             return False  # Movement in progress
         else:
             # Trajectory completed
