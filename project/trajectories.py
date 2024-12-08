@@ -94,19 +94,12 @@ class PizzaRobotState(Enum):
     """FSM state enumeration"""
 
     START = 0
-    PLAN_IIWA_PAINTER = 1
-    PLAN_TRAJ_0 = 2
-    EXECUTE_IIWA_PAINTER = 3
-    EXECUTE_PLANNED_TRAJECTORY = 4
-    FINISHED = 5
-    FIX_BASE = 6
-    EVAL_PIZZA_STATE = 7
-    CLOSE_GRIPPER = 8
-    OPEN_GRIPPER = 9
-    LOCK_ARM = 10
-    PLAN_MOVE_TO_BOWL_0 = 11
-    PLAN_MOVE_TO_BOWL_1 = 12
-    EXECUTE_PLANNED_TRAJECTORY_1 = 13
+    EXECUTE_PLANNED_TRAJECTORY = 1
+    FINISHED = 2
+    EVAL_PIZZA_STATE = 3
+    MOVE_TO_BOWL_0 = 4
+    MOVE_TO_BOWL_1 = 5
+    EXECUTE_PLANNED_TRAJECTORY_1 = 6
 
 
 class PizzaPlanner(LeafSystem):
@@ -312,21 +305,8 @@ class PizzaPlanner(LeafSystem):
         context.get_abstract_state(self._camera_0_point_cloud_idx).set_value(point_cloud)
         return point_cloud
 
-    # def _calc_joint_centering_gains(self, context: Context, output: BasicVector) -> None:
-    #     output.set_value(context.get_discrete_state(self._joint_centering_gains_idx).get_value())
-  
-    # TODO: probably dead for now
-    # def _calc_diff_ik_reset(self, context: Context, output: AbstractValue) -> None:
-    #     # credit: used with permission from Nicholas.
-    #     """Logic for deciding when to reset the differential IK controller state."""
-    #     state = context.get_abstract_state(int(self._fsm_state_idx)).get_value()
-    #     if state == PizzaRobotState.PLAN_IIWA_PAINTER:
-    #         # Need to reset before executing a trajectory.
-    #         output.set_value(True)
-    #     else:
-    #         output.set_value(False)
+    
 
-    # init function
     def _initialize_discrete_state(self, context: Context, discrete_values: DiscreteValues) -> None:
         discrete_values.get_mutable_vector(self._current_iiwa_positions_idx).SetFromVector(
             self._iiwa_state_estimated_input_port.Eval(context)[:10]
@@ -359,7 +339,9 @@ class PizzaPlanner(LeafSystem):
         # discrete_values.get_mutable_value(self._camera_0_point_cloud_idx).set_value(
         #     self._camera_ptcloud_input_port.Eval(context)
         # )
-        
+
+
+    ###------------------------------------------------------------------STATE MACHINE PLANNER-------------------------------------------------------------------###    
 
     ###------------ STATE MACHINE LOGIC -----------###
     def _run_fsm_logic(self, context: Context, state: State) -> None:
@@ -394,36 +376,6 @@ class PizzaPlanner(LeafSystem):
             if current_time >= 1.0:
                 transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
         
-        # ----------------- PLAN IIWA_PAINTER ----------------- #
-        elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
-            gripper_pose = self._solve_gripper_pose(context)
-            pose_traj = self._create_painter_traj(
-                gripper_pose,
-                start_time_s=timing_information.start_iiwa_painter,
-                context=context
-            )
-            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(pose_traj)
-
-            mutable_fsm_state.set_value(PizzaRobotState.FIX_BASE)
-            print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
-
-        # ----------------- FIX BASE ----------------- #
-        elif fsm_state_value == PizzaRobotState.FIX_BASE:
-            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
-            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
-
-            transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
-        
-
-        # ----------------- PLAN TRAJECTORY_0 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
-            pose_traj = self.traj_linear_move_to_bowl_0(context)
-            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
-                PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
-            )
-            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
-            print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
-        
 
         # ----------------- EVALUATE PIZZA STATE ----------------- #
         elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
@@ -440,8 +392,8 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
 
-        # ----------------- PLAN MOVE TO BOWL 0 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PLAN_MOVE_TO_BOWL_0:
+        # ----------------- MOVE TO BOWL 0 ----------------- #
+        elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
 
             print(f"{self._joint_output_port.Eval(context)=}")
 
@@ -457,8 +409,8 @@ class PizzaPlanner(LeafSystem):
             )
             transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
 
-        # ----------------- PLAN MOVE TO BOWL 1 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PLAN_MOVE_TO_BOWL_1:
+        # ----------------- MOVE TO BOWL 1 ----------------- #
+        elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_1:
 
             print(f"{self._joint_output_port.Eval(context)=}")
 
@@ -508,8 +460,14 @@ class PizzaPlanner(LeafSystem):
             print("Task is finished.")
 
 
+
+### --------------HELPER FUNCTIONS------------------- ###
+
     def calc_limits_fix_base_position(self, context: Context, xyz_fixed):
+        """Function to fix the movable base in set position"""
+
         tolerance = 1e-3
+
         # Get mutable joint velocity limits from discrete state
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
 
@@ -525,9 +483,12 @@ class PizzaPlanner(LeafSystem):
                 init_vels = np.array(self._initial_diff_ik_params.get_joint_velocity_limits()).flatten()
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
+
         return new_joint_velocity_limits
 
     def set_arm_locked(self, context: Context, locked):
+        """Function to fix arm joints (and therefore only move base) ---> currently not working"""
+
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
         new_joint_velocity_limits = np.copy(joint_velocity_limits)
         init_vels = np.array(self._initial_diff_ik_params.get_joint_velocity_limits()).flatten()
@@ -538,31 +499,7 @@ class PizzaPlanner(LeafSystem):
         return new_joint_velocity_limits
     
 
-    def move_base_to_location(self, context: Context):
-        pass
-
-
-    # old code
-    def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
-        start_time = context.get_time()
-        # Retrieve the desired pose (implementation depends on your trajectory management)
-        # For example purposes, creating dummy poses
-        X_WGinit = RigidTransform()
-        int_1 = RigidTransform(RotationMatrix(), np.array([0, 1, 1]))
-        int_2 = RigidTransform(RotationMatrix(), np.array([-4, 1, 1]))
-        goal_pose = RigidTransform(
-            R=RotationMatrix(), 
-            p=np.array(env.bowl_0) + np.array([0.25, 0, 0.25])
-        )
-        poses = PiecewisePose.MakeLinear(
-            [start_time, 
-             start_time + move_time / 4, 
-             start_time + 3 * move_time / 4, 
-             start_time + move_time],
-            [X_WGinit, int_1, int_2, goal_pose]
-        )
-        return poses
-
+"""Trajectory making for moving iiwa arm"""
     def make_traj_move_arm(
         self, context: Context, start_pose, goal_pose, intermediate_poses=None, start_time=None, move_time=5,
     ) -> PiecewisePose:
@@ -599,6 +536,7 @@ class PizzaPlanner(LeafSystem):
         )
         return poses
 
+#example trajectory making from class -> useful background 
     def _create_painter_traj(
         self,
         X_WG,
@@ -668,11 +606,8 @@ class PizzaPlanner(LeafSystem):
 
 
 
-
-#HELPER FUNCTIONS 
-
     def _close_gripper_traj(self, context: Context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
-        # Create gripper trajectory.
+        # Create close gripper trajectory.
         end_gripper_position = 0.002
         move_time_s = 0.5
 
@@ -683,7 +618,7 @@ class PizzaPlanner(LeafSystem):
         return g_traj
 
     def _open_gripper_traj(self, context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
-        # Create gripper trajectory.
+        # Create open gripper trajectory.
         end_gripper_position = 0.1
         move_time_s = 0.5
 
@@ -695,6 +630,7 @@ class PizzaPlanner(LeafSystem):
 
 
     def gripper_action(self,context,current_time, state, action):
+        """ Make the gripper execute trajectory to close and open the gripper"""
         start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
 
         #if trajectory does not exist, make it, else execute next time step
@@ -716,8 +652,12 @@ class PizzaPlanner(LeafSystem):
         del(self._gripper_traj)
         return True
 
-#example use of function in other states: 
+#example use of function: 
+
+#gripper_action_example use
 # if self.gripper_action(context,current_time, state, "close") == True:
 #     transition_to_state(PizzaRobotState.FINISHED)
 
-
+#fix_base example:
+#new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
+#state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
