@@ -420,7 +420,7 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     )
     builder.Connect(
         state_machine.GetOutputPort("iiwa_positions"),
-        iiwa_position_command_switch.DeclareInputPort("iiwa_positions")
+        iiwa_position_command_switch.DeclareInputPort("iiwa_joint_positions")
     )
     builder.Connect(
         controller.GetOutputPort("joint_positions"),
