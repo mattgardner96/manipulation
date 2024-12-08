@@ -15,6 +15,7 @@ from pydrake.all import (
     DiscreteValues,
     DifferentialInverseKinematicsParameters,
     InputPortIndex,
+    InverseKinematics,
     LeafSystem,
     MultibodyPlant,
     PathParameterizedTrajectory,
@@ -214,6 +215,10 @@ class PizzaPlanner(LeafSystem):
             AbstractValue.Make(default_gripper_pose)
         )
 
+        self._control_mode_idx = self.DeclareAbstractState(
+            AbstractValue.Make(InputPortIndex(0))
+        )
+
         # ------------ CAMERA INPUT PORTS ------------ #
         self._camera_depth_input_port = self.DeclareAbstractInputPort(
             "camera_0.depth_image",
@@ -228,7 +233,8 @@ class PizzaPlanner(LeafSystem):
             AbstractValue.Make(PointCloud())
         )
 
-        # OUTPUT PORTS (keep the order)
+        # ----------------- OUTPUT PORTS ----------------- #
+        # (keep the order)
         self.DeclareAbstractOutputPort(
             "desired_pose",
             alloc=lambda: AbstractValue.Make(RigidTransform()),
@@ -236,9 +242,9 @@ class PizzaPlanner(LeafSystem):
         )
 
         # TODO: remove this output port if we don't need?
-        # self.DeclareVectorOutputPort(
-        #     "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
-        # )
+        self.DeclareVectorOutputPort(
+            "iiwa_positions", num_joint_positions, self._get_iiwa_positions
+        )
 
         self._joint_output_port = self.DeclareVectorOutputPort(
             "joint_velocity_limits",
@@ -261,6 +267,13 @@ class PizzaPlanner(LeafSystem):
             self._set_gripper_position
         )
 
+        self._control_mode_port = self.DeclareAbstractOutputPort(
+            "control_mode", lambda: AbstractValue.Make(InputPortIndex(0)),
+            self._calc_control_mode
+        )
+
+
+
         # self.DeclareVectorOutputPort(
         #     "joint_centering_gains",
         #     num_joint_positions,
@@ -270,8 +283,11 @@ class PizzaPlanner(LeafSystem):
         self.DeclareInitializationDiscreteUpdateEvent(self._initialize_discrete_state)
         self.DeclarePerStepUnrestrictedUpdateEvent(self._run_fsm_logic)
 
-    def _get_current_iiwa_positions(self, context: Context, output: BasicVector) -> None:
-        positions = context.get_discrete_state(self._current_iiwa_positions_idx).get_value()
+    def _calc_control_mode(self, context: Context, output: AbstractValue) -> None:
+        output.set_value(context.get_abstract_state(self._control_mode_idx).get_value())
+
+    def _get_iiwa_positions(self, context: Context, output: BasicVector) -> None:
+        positions = context.get_discrete_state(self._iiwa_positions_idx).get_value()
         output.set_value(positions)
 
     def _solve_gripper_pose(self, context: Context) -> RigidTransform:
@@ -308,7 +324,7 @@ class PizzaPlanner(LeafSystem):
     
 
     def _initialize_discrete_state(self, context: Context, discrete_values: DiscreteValues) -> None:
-        discrete_values.get_mutable_vector(self._current_iiwa_positions_idx).SetFromVector(
+        discrete_values.get_mutable_vector(self._iiwa_positions_idx).SetFromVector(
             self._iiwa_state_estimated_input_port.Eval(context)[:10]
         )
 
@@ -376,7 +392,6 @@ class PizzaPlanner(LeafSystem):
             if current_time >= 1.0:
                 transition_to_state(PizzaRobotState.MOVE_TO_BOWL_0)
         
-
         # ----------------- EVALUATE PIZZA STATE ----------------- #
         elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
             # print("Evaluating pizza state.")
@@ -391,25 +406,6 @@ class PizzaPlanner(LeafSystem):
 
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
-
-        # # ----------------- MOVE TO BOWL 0 ----------------- #
-        # elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
-
-        #     curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
-        #     pose_traj = self.make_traj_move_arm(
-        #         context,
-        #         start_pose=curr_pose,
-        #         goal_pose=RigidTransform(
-        #             curr_pose.rotation(),
-        #             p=self.workstation_poses["table_1"].translation() # only move xyz base to the location we defined
-        #         ),
-        #         start_time=current_time,
-        #         move_time=5
-        #     )
-        #     state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
-        #         PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
-        #     )
-        #     transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
 
         # ----------------- PLAN AND EXECUTE MOVE TO BOWL 0 ----------------- #
         elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:

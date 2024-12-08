@@ -28,6 +28,7 @@ from pydrake.all import (
     StateInterpolatorWithDiscreteDerivative,
     DifferentialInverseKinematicsParameters,
     LinearConstraint,
+    PortSwitch,
 )
 
 from IPython.display import display, SVG
@@ -344,10 +345,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         controller.GetInputPort("robot_state"),
     )
 
-    builder.Connect(
-        controller.get_output_port(),
-        pos_to_state_sys.get_input_port(),
-    )
+    # builder.Connect(
+    #     controller.get_output_port(),
+    #     pos_to_state_sys.get_input_port(),
+    # )
 
     builder.Connect(
         pos_to_state_sys.get_output_port(),
@@ -408,6 +409,28 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         state_machine.GetOutputPort("gripper_position"),
         station.GetInputPort("gripper.position")
     )
+
+    # PortSwitch for switching between joint trajectory source and differential IK
+    iiwa_position_command_switch: PortSwitch = builder.AddNamedSystem(
+        "iiwa_position_command_switch", PortSwitch(10)
+    )
+    builder.Connect(
+        state_machine.GetOutputPort("control_mode"),
+        iiwa_position_command_switch.get_port_selector_input_port(),
+    )
+    builder.Connect(
+        state_machine.GetOutputPort("iiwa_positions"),
+        iiwa_position_command_switch.DeclareInputPort("iiwa_positions")
+    )
+    builder.Connect(
+        controller.GetOutputPort("joint_positions"),
+        iiwa_position_command_switch.DeclareInputPort("diff_ik_positions")
+    )
+    builder.Connect(
+        iiwa_position_command_switch.get_output_port(),
+        pos_to_state_sys.get_input_port()
+    )
+        
 
 
     # builder.Connect(
