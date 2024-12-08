@@ -428,16 +428,16 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     )
     # TODO: make this work with the port switch
     # connect planner direct to state interpolator
-    builder.Connect(
-        state_machine.GetOutputPort("iiwa_positions"),
-        pos_to_state_sys.get_input_port()
-    )
-
-    # port switch output to state interpolator
     # builder.Connect(
-    #     iiwa_position_command_switch.get_output_port(),
+    #     state_machine.GetOutputPort("iiwa_positions"),
     #     pos_to_state_sys.get_input_port()
     # )
+
+    # port switch output to state interpolator
+    builder.Connect(
+        iiwa_position_command_switch.get_output_port(),
+        pos_to_state_sys.get_input_port()
+    )
         
 
 
