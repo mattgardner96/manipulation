@@ -10,6 +10,7 @@ from pydrake.all import (
     RigidTransform,
     RotationMatrix,
     Solve,
+    eq
 )
 
 # CREDIT: nepfaff/iiwa-setup
@@ -21,6 +22,7 @@ def solve_global_inverse_kinematics(
     position_tolerance: float,
     orientation_tolerance: float,
     gripper_frame_name: str = "body",
+    fix_base=[False,False,False],
 ) -> Optional[np.ndarray]:
     """Computes global IK.
 
@@ -54,8 +56,6 @@ def solve_global_inverse_kinematics(
         p_AQ_upper=p_G_ref + position_tolerance,
     )
 
-    ik.AddLinearEqualityConstraint(q_variables[2], initial_guess[2])
-
     # Orientation constraint
     R_G_ref = X_G.rotation()
     ik.AddOrientationConstraint(
@@ -69,6 +69,20 @@ def solve_global_inverse_kinematics(
     prog = ik.prog()
     # print(f"{q_variables.shape=}")
     # print(f"{initial_guess.shape=}")
+
+    # initial guess is q_current of the robot
+    # fixes the base if the axis is fixed
+    for i,axis_fixed in enumerate(fix_base):
+        if axis_fixed:
+            # print(q_variables[i])
+            # print(initial_guess[i])
+            prog.AddConstraint(q_variables[i] == initial_guess[i])
+    
+    # add min/max bounding box constraints
+    xy_min = np.array([-2.25, +0.25])
+    xy_max = np.array([0.25, 2.25])
+    prog.AddBoundingBoxConstraint(xy_min, xy_max, q_variables[:2])
+    
     prog.SetInitialGuess(q_variables, initial_guess)
 
     result = Solve(prog)

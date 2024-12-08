@@ -1,11 +1,13 @@
 import numpy as np
 
-NUM_MUSHROOMS = 0
-NUM_TOMATOES = 0
-bowl_0 = [-2.7, 0.5, 0.73]
-bowl_1 = [-2.7, 1.0, 0.73]
-bowl_2 = [-2.7, 1.5, 0.73]
-pan_position = [-1, -0.5, 0.75]
+NUM_MUSHROOMS = 10
+NUM_TOMATOES = 10
+scene_z_offset = -0.25
+bowl_0 = [-2.7, 0.5, 0.73+scene_z_offset]
+bowl_1 = [-2.7, 1.0, 0.73+scene_z_offset]
+bowl_2 = [-2.7, 1.5, 0.73+scene_z_offset]
+pan_position = [-1, -0.5, 0.75+scene_z_offset]
+
 
 
 
@@ -96,22 +98,22 @@ initial_scene = """
     parent: world
     child: table1::table
     X_PC:
-      translation: [-3, 1, -0.015]
+      translation: [-3, 1, """+str(-0.015+scene_z_offset)+"""]
       rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
 
 - add_weld:
     parent: world
     child: oven1::ovenV1
     X_PC:
-      translation: [1, 1.5, -0.015]
+      translation: [1, 1.5, """+str(-0.015+scene_z_offset)+"""]
       rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
 
 - add_weld:
     parent: world
     child: serving::serving_shelf
     X_PC:
-      translation: [0, 2.5, -0.015]
-      rotation: !Rpy { deg: [90.0, 0.0, 0.0 ]}
+      translation: [0, 2.5, """+str(-0.015+scene_z_offset)+"""]
+      rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
 
 
 """
@@ -128,7 +130,7 @@ camera_model = """
     parent: world
     child: table0::table
     X_PC:
-      translation: [-1, -0.5, -0.015]
+      translation: [-1, -0.5, """+str(-0.015+scene_z_offset)+"""]
       
 - add_frame:
     name: camera_table_above
