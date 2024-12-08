@@ -1,10 +1,10 @@
 import numpy as np
 
-NUM_MUSHROOMS = 30
-NUM_TOMATOES = 30
-bowl_0 = [-3, 0.5, 0.73]
-bowl_1 = [-3, 1, 0.73]
-bowl_2 = [-3, 1.5, 0.73]
+NUM_MUSHROOMS = 0
+NUM_TOMATOES = 0
+bowl_0 = [-2.7, 0.5, 0.73]
+bowl_1 = [-2.7, 1.0, 0.73]
+bowl_2 = [-2.7, 1.5, 0.73]
 pan_position = [-1, -0.5, 0.75]
 
 
@@ -24,7 +24,7 @@ directives:
         iiwa_joint_7: [0]
         iiwa_base_x: [-1]
         iiwa_base_y: [1]
-        iiwa_base_z: [0]
+        iiwa_base_z: [0.25]
 - add_model:
     name: gripper
     file: package://drake_models/wsg_50_description/sdf/schunk_wsg_50_with_tip.sdf
