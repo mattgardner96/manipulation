@@ -104,6 +104,7 @@ class PizzaRobotState(Enum):
     EXECUTE_PLANNED_TRAJECTORY_1 = 6
     TEST_IK_MOVE = 7
     PROX_MOVE_TO_BOWL_1 = 8
+    MOVE_AWAY_FROM_BOWL_1 = 9
 
 
 class PizzaPlanner(LeafSystem):
@@ -120,6 +121,7 @@ class PizzaPlanner(LeafSystem):
         gripper_body = self._iiwa_plant.GetBodyByName("body")
         self._gripper_body_index = gripper_body.index()
         self._num_joint_positions = num_joint_positions
+        self.count = 0
 
         # Table 0 workstation = (-1, -0.25, 1.5) 
         # Table 1 workstation placement = (-2.5, 1, 1.5)
@@ -431,33 +433,6 @@ class PizzaPlanner(LeafSystem):
             transition_to_state(PizzaRobotState.TEST_IK_MOVE)
 
 
-        # ----------------- PROX MOVE TO BOWL 1 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
-
-            set_control_mode("diff_ik")
-            
-            # lock z, unlock xy
-            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0,0,1])
-            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
-
-            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
-            # goal_pose = self.GetOutputPort("desired_pose").Eval(context) @ RigidTransform(
-            #     R=RotationMatrix(),
-            #     p=[0,0,-0.15]
-            # )
-            
-            goal_pose = RigidTransform(
-                R=curr_pose.rotation(),
-                p=env.bowl_1 + np.array([0.12, 0, 0.18])
-            )
-
-            # diff ik executor returns false when the move hasn't completed
-            if self._move_to_posn(context, state, goal_pose,[1,1,1]) == False:
-                return
-
-            transition_to_state(PizzaRobotState.FINISHED)
-
-
         # ----------------- TEST IK MOVE ----------------- #
         elif fsm_state_value == PizzaRobotState.TEST_IK_MOVE:
 
@@ -474,11 +449,77 @@ class PizzaPlanner(LeafSystem):
             if self._ik_move_to_posn(context, state, goal_pose, [0,0,1] ) == False:
                 return
             
+            self.count = 0
             # # close gripper
             # if self.gripper_action(context, current_time, state, "close") == True:
             #     transition_to_state(PizzaRobotState.FINISHED)
 
             transition_to_state(PizzaRobotState.PROX_MOVE_TO_BOWL_1)
+
+
+    # ----------------- PROX MOVE TO BOWL 1 ----------------- #
+        elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
+
+            set_control_mode("joint")
+            
+            # # lock z, unlock xy
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0,0,1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
+            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+            # goal_pose = self.GetOutputPort("desired_pose").Eval(context) @ RigidTransform(
+            #     R=RotationMatrix(),
+            #     p=[0,0,-0.15]
+            # )
+            
+            goal_pose = RigidTransform(
+                R=curr_pose.rotation(),
+                p=env.bowl_1 + np.array([0.12, 0, 0.18])
+            )
+
+            if self.count == 0:
+                if self._ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
+                    return
+            
+            if self.count == 1:
+            # close gripper
+                if self.gripper_action(context, current_time, state, "close") == True:
+                    transition_to_state(PizzaRobotState.MOVE_AWAY_FROM_BOWL_1)
+
+
+        # ----------------- PROX MOVE  ----------------- #
+        elif fsm_state_value == PizzaRobotState.MOVE_AWAY_FROM_BOWL_1:
+
+            set_control_mode("joint")
+            
+            # # lock z, unlock xy
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0,0,1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
+            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+            # goal_pose = self.GetOutputPort("desired_pose").Eval(context) @ RigidTransform(
+            #     R=RotationMatrix(),
+            #     p=[0,0,-0.15]
+            # )
+            
+            goal_pose = RigidTransform(
+                R=curr_pose.rotation(),
+                p=np.array([0,0,0.65])
+            )
+
+            if self.count == 0:
+                if self._ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
+                    return
+            
+            transition_to_state(PizzaRobotState.FINISHED)
+            # if self.count == 1:
+            # # close gripper
+            #     if self.gripper_action(context, current_time, state, "close") == True:
+            #         transition_to_state(PizzaRobotState.FINISHED)
+
+
+
+
 
         
         # ----------------- EVALUATE PIZZA STATE ----------------- #
@@ -496,36 +537,36 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
 
-        # ----------------- PLAN AND EXECUTE MOVE TO BOWL 0 ----------------- #
-        elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
-            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+        # # ----------------- PLAN AND EXECUTE MOVE TO BOWL 0 ----------------- #
+        # elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
+        #     curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
 
-            if self._move_to_posn(
-                context,
-                state, 
-                goal_pose=RigidTransform(       
-                    R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
-                    p=env.bowl_0 + np.array([0.5, 0, 0.3]),
-                )
-            ) == False:
-                return
+        #     if self._move_to_posn(
+        #         context,
+        #         state, 
+        #         goal_pose=RigidTransform(       
+        #             R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
+        #             p=env.bowl_0 + np.array([0.5, 0, 0.3]),
+        #         )
+        #     ) == False:
+        #         return
 
-            # lock the base
-            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[1, 1, 1])
-            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
-            print("base locked")
+        #     # lock the base
+        #     new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[1, 1, 1])
+        #     state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+        #     print("base locked")
 
-            if self._move_to_posn(
-                context,
-                state, 
-                goal_pose=RigidTransform(       
-                    R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
-                    p=env.bowl_0 + np.array([0.03, 0, 0.2]),
-                )
-            ) == False:
-                return
+        #     if self._move_to_posn(
+        #         context,
+        #         state, 
+        #         goal_pose=RigidTransform(       
+        #             R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
+        #             p=env.bowl_0 + np.array([0.03, 0, 0.2]),
+        #         )
+        #     ) == False:
+        #         return
 
-            transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
+        #     transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
                 
 
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
@@ -699,7 +740,7 @@ class PizzaPlanner(LeafSystem):
 
     def _close_gripper_traj(self, context: Context, start_gripper_position, start_time_s: int) -> PiecewisePolynomial:
         # Create close gripper trajectory.
-        end_gripper_position = 0.002
+        end_gripper_position = 0.000
         move_time_s = 0.5
 
         gripper_t_lst = start_time_s + np.array([0.0, move_time_s])
@@ -723,6 +764,7 @@ class PizzaPlanner(LeafSystem):
     def gripper_action(self,context,current_time, state, action):
         """ 
         Make the gripper execute trajectory to close and open the gripper.
+        Precondition: self.count is equal to 1.
         Args:
             action: "close" or "open" 
         """
@@ -745,6 +787,7 @@ class PizzaPlanner(LeafSystem):
             return False
             
         del(self._gripper_traj)
+        self.count = 0
         return True
 
     def _move_to_posn(self, context: Context, state: State, goal_pose: RigidTransform, fix_base) -> bool:
@@ -784,7 +827,9 @@ class PizzaPlanner(LeafSystem):
         else:
             return False
 
+
     def _ik_move_to_posn(self, context: Context, state: State, goal_pose: RigidTransform, fix_base):
+        
         if not hasattr(self, '_joint_traj'):
             # Compute the current and goal joint positions
             q_current = np.append(self._iiwa_state_estimated_input_port.Eval(context)[:10],np.zeros(2))
@@ -800,7 +845,7 @@ class PizzaPlanner(LeafSystem):
 
             if q_goal is None:
                 print("No IK solution found.")
-                return True  # Movement cannot be performed
+                return False  # Movement cannot be performed
 
             # Create a joint trajectory from current to goal positions
             move_time = 2.0  # Duration of the movement in seconds
@@ -821,6 +866,7 @@ class PizzaPlanner(LeafSystem):
             # Trajectory completed
             del self._joint_traj
             del self._joint_traj_start_time
+            self.count = 1
             return True  # Movement completed
     
 

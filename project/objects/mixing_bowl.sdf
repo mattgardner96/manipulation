@@ -3,7 +3,7 @@
     <link name="mixing_bowl_body_link">
       <pose>0 0 0 0 0 0</pose>
       <inertial>
-        <mass>1.0</mass>
+        <mass>0.1</mass>
         <pose>0.00000 0.05702 -0.00000 0 0 0</pose>
         <inertia>
           <ixx>9.61221e-03</ixx>
@@ -31,7 +31,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_001">
@@ -43,7 +45,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_002">
@@ -55,7 +59,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_003">
@@ -67,7 +73,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_004">
@@ -79,7 +87,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_005">
@@ -91,7 +101,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_006">
@@ -103,7 +115,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_007">
@@ -115,7 +129,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_008">
@@ -127,7 +143,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_009">
@@ -139,7 +157,9 @@
         </geometry>
         <drake:proximity_properties>
           <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+07</drake:hydroelastic_modulus>
+          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
+          <drake:mu_static>0.9</drake:mu_static>
+          <drake:mu_dynamic>0.9</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
     </link>

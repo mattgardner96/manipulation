@@ -170,6 +170,9 @@ def AddMobileIiwaDifferentialIK(
             nominal_joint_position = self.get_input_port(2).Eval(context)
             params.set_nominal_joint_position(nominal_joint_position)
 
+            # print(self._diff_ik_system.GetPositions(context).shape)
+            # self._diff_ik_system.SetPositions(context, np.append(nominal_joint_position,np.zeros(30)))
+
             # Update joint centering gains
             # joint_centering_gains = self.get_input_port(3).Eval(context)
             # params.set_joint_centering_gain(np.diag(joint_centering_gains))
@@ -432,6 +435,18 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     #     state_machine.GetOutputPort("iiwa_positions"),
     #     pos_to_state_sys.get_input_port()
     # )
+
+    force_limit = builder.AddNamedSystem(
+        "force_limit_source",
+        ConstantVectorSource([2000]),
+    )
+
+
+    builder.Connect(
+        force_limit.get_output_port(),
+        station.GetInputPort("gripper.force_limit")
+    )
+
 
     # port switch output to state interpolator
     builder.Connect(

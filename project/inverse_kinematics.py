@@ -78,7 +78,7 @@ def solve_global_inverse_kinematics(
             # print(initial_guess[i])
             prog.AddConstraint(q_variables[i] == initial_guess[i])
     
-    # add min/max bounding box constraints
+    # add min/max bounding box constraints for x/y work area
     xy_min = np.array([-2.25, +0.25])
     xy_max = np.array([0.25, 2.25])
     prog.AddBoundingBoxConstraint(xy_min, xy_max, q_variables[:2])
