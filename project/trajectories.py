@@ -104,6 +104,9 @@ class PizzaRobotState(Enum):
     CLOSE_GRIPPER = 8
     OPEN_GRIPPER = 9
     LOCK_ARM = 10
+    PLAN_MOVE_TO_BOWL_0 = 11
+    PLAN_MOVE_TO_BOWL_1 = 12
+    EXECUTE_PLANNED_TRAJECTORY_1 = 13
 
 
 class PizzaPlanner(LeafSystem):
@@ -120,6 +123,17 @@ class PizzaPlanner(LeafSystem):
         gripper_body = self._iiwa_plant.GetBodyByName("body")
         self._gripper_body_index = gripper_body.index()
         self._num_joint_positions = num_joint_positions
+
+        # Table 0 workstation = (-1, -0.25, 1.5) 
+        # Table 1 workstation placement = (-2.5, 1, 1.5)
+        # Oven workstation = (0, 1.5, 1)
+        # Delivery workstation = (-0.5, 2, 1)
+        self.workstation_poses = {
+            "table_0": RigidTransform(RotationMatrix.MakeZRotation(np.pi),[-1,0.25,1]),
+            "table_1": RigidTransform(RotationMatrix.MakeZRotation(np.pi),[-2.5,1,1]),
+            "oven": RigidTransform(RotationMatrix.MakeZRotation(0),[0,1.5,1]),
+            "delivery": RigidTransform(RotationMatrix.MakeZRotation(np.pi/2),[-0.5,1.5,1])
+        }
 
         plant_context = self._iiwa_plant.CreateDefaultContext()
 
@@ -233,20 +247,20 @@ class PizzaPlanner(LeafSystem):
         #     "current_iiwa_positions", num_joint_positions, self._get_current_iiwa_positions
         # )
 
-        self.DeclareVectorOutputPort(
+        self._joint_output_port = self.DeclareVectorOutputPort(
             "joint_velocity_limits",
             2 * num_joint_positions,
-            self._calc_joint_velocity_limits,
+            self._calc_joint_velocity_limits
         )
         self.DeclareVectorOutputPort(
             "ee_velocity_limits",
             6,
-            self._calc_ee_velocity_limits,
+            self._calc_ee_velocity_limits
         )
         self.DeclareVectorOutputPort(
             "nominal_joint_position",
             num_joint_positions,
-            self._calc_nominal_joint_position,
+            self._calc_nominal_joint_position
         )
         self.DeclareVectorOutputPort(
             "gripper_position",
@@ -319,8 +333,8 @@ class PizzaPlanner(LeafSystem):
         )
 
         lower_limits, upper_limits = self._initial_diff_ik_params.get_joint_velocity_limits()
-        joint_velocity_limits = np.concatenate((lower_limits, upper_limits))
-        discrete_values.get_mutable_vector(self._joint_velocity_limits_idx).set_value(joint_velocity_limits)
+        joint_vel_limits = np.concatenate((lower_limits, upper_limits))
+        discrete_values.get_mutable_vector(self._joint_velocity_limits_idx).set_value(joint_vel_limits)
 
         lower_limits, upper_limits = self._initial_diff_ik_params.get_end_effector_translational_velocity_limits()
         ee_vel_limits = np.concatenate((lower_limits, upper_limits))
@@ -369,11 +383,15 @@ class PizzaPlanner(LeafSystem):
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
 
-            # keep the arm on the ground for now.
-            joint_vels = self.calc_limits_fix_base_position(context, [0, 0, 1])
-            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
+            # keep the robot on the ground for now.
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
 
-            transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
+            # make sure the arm is unlocked
+            # is_locked_vels = self.set_arm_locked(context, False)
+            # state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, is_locked_vels)
+
+            transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
@@ -390,10 +408,10 @@ class PizzaPlanner(LeafSystem):
 
         # ----------------- FIX BASE ----------------- #
         elif fsm_state_value == PizzaRobotState.FIX_BASE:
-            new_joint_lims = self.calc_limits_fix_base_position(context, [0, 0, 1])
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
 
-            transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
+            transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
         
 
         # ----------------- PLAN TRAJECTORY_0 ----------------- #
@@ -410,7 +428,6 @@ class PizzaPlanner(LeafSystem):
         elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
             # print("Evaluating pizza state.")
             point_cloud = self._grab_point_cloud(context)
-            print(point_cloud)
 
             # test code
             points = point_cloud.xyzs().T
@@ -437,7 +454,7 @@ class PizzaPlanner(LeafSystem):
             
             if current_time >= gripper_traj.end_time():
                 del(self._gripper_traj)
-                transition_to_state(PizzaRobotState.OPEN_GRIPPER)
+                transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_0)
 
         # ----------------- OPEN GRIPPER ----------------- #
         elif fsm_state_value == PizzaRobotState.OPEN_GRIPPER:
@@ -456,6 +473,39 @@ class PizzaPlanner(LeafSystem):
                 del(self._gripper_traj)
                 transition_to_state(PizzaRobotState.FINISHED)
 
+        # ----------------- PLAN MOVE TO BOWL 0 ----------------- #
+        elif fsm_state_value == PizzaRobotState.PLAN_MOVE_TO_BOWL_0:
+
+            print(f"{self._joint_output_port.Eval(context)=}")
+
+            pose_traj = self.make_traj_move_arm(
+                context,
+                start_pose=state.get_abstract_state(self._desired_pose_idx).get_value(),
+                goal_pose=self.workstation_poses["table_0"],
+                start_time=current_time,
+                move_time=5
+            )
+            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
+                PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
+            )
+            transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
+
+        # ----------------- PLAN MOVE TO BOWL 1 ----------------- #
+        elif fsm_state_value == PizzaRobotState.PLAN_MOVE_TO_BOWL_1:
+
+            print(f"{self._joint_output_port.Eval(context)=}")
+
+            pose_traj = self.make_traj_move_arm(
+                context,
+                start_pose=state.get_abstract_state(self._desired_pose_idx).get_value(),
+                goal_pose=self.workstation_poses["table_1"],
+                start_time=current_time,
+                move_time=5
+            )
+            state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(
+                PiecewisePoseWithTimingInformation(trajectory=pose_traj, start_time_s=current_time)
+            )
+            transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY_1)
         
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
@@ -463,13 +513,26 @@ class PizzaPlanner(LeafSystem):
 
             pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
 
-            if current_time >= timing_information.start_iiwa_painter:
-                desired_pose = pose_traj.trajectory.GetPose(current_time - timing_information.start_iiwa_painter)
+            if current_time >= pose_traj.start_time_s:
+                elapsed_time = current_time - pose_traj.start_time_s
+                desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
                 state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
             
             if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
-                print("Transitioning to FINISHED state.")
-                mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+                transition_to_state(PizzaRobotState.PLAN_MOVE_TO_BOWL_1)
+
+        # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
+        elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY_1:
+
+            pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
+
+            if current_time >= pose_traj.start_time_s:
+                elapsed_time = current_time - pose_traj.start_time_s
+                desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
+                state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
+            
+            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
+                transition_to_state(PizzaRobotState.OPEN_GRIPPER)
 
 
         # ----------------- FINISHED ----------------- #
@@ -480,13 +543,11 @@ class PizzaPlanner(LeafSystem):
 
     def calc_limits_fix_base_position(self, context: Context, xyz_fixed):
         tolerance = 1e-3
-
         # Get mutable joint velocity limits from discrete state
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
 
         # Initialize new joint velocity limits
         new_joint_velocity_limits = np.copy(joint_velocity_limits)
-
         for i, axis_fixed in enumerate(xyz_fixed):
             if axis_fixed:
                 # If fixed, set velocity limits to zero
@@ -497,16 +558,15 @@ class PizzaPlanner(LeafSystem):
                 init_vels = np.array(self._initial_diff_ik_params.get_joint_velocity_limits()).flatten()
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
-
         return new_joint_velocity_limits
-
 
     def set_arm_locked(self, context: Context, locked):
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
         new_joint_velocity_limits = np.copy(joint_velocity_limits)
         init_vels = np.array(self._initial_diff_ik_params.get_joint_velocity_limits()).flatten()
 
-        new_joint_velocity_limits[3:] = 0.0 if locked else init_vels[3:]
+        new_joint_velocity_limits[3:10] = 0.0 if locked else init_vels[3:10]
+        new_joint_velocity_limits[13:] = 0.0 if locked else init_vels[13:]
         
         return new_joint_velocity_limits
     
@@ -515,6 +575,7 @@ class PizzaPlanner(LeafSystem):
         pass
 
 
+    # old code
     def traj_linear_move_to_bowl_0(self, context: Context, move_time=10) -> PiecewisePose:
         start_time = context.get_time()
         # Retrieve the desired pose (implementation depends on your trajectory management)
@@ -536,30 +597,38 @@ class PizzaPlanner(LeafSystem):
         return poses
 
     def make_traj_move_arm(
-        self,
-        context: Context,
-        start_pose,
-        end_pose,
-        start_time=None,
-        move_time=10,
+        self, context: Context, start_pose, goal_pose, intermediate_poses=None, start_time=None, move_time=5,
     ) -> PiecewisePose:
+        '''
+        context: planner Context object
+        start_pose: RigidTransform for entry position
+        goal_pose: RigidTransform for exit position
+        intermediate_poses: list of RigidTransforms for intermediate points as desired
+        start_time: time to start the trajectory (default is current time)
+        move_time: elapsed time of trajectory
+        '''
         if not start_time:
             start_time = context.get_time()
-        # Retrieve the desired pose (implementation depends on your trajectory management)
-        # For example purposes, creating dummy poses
-        X_WGinit = RigidTransform()
-        int_1 = RigidTransform(RotationMatrix(), np.array([0, 1, 1]))
-        int_2 = RigidTransform(RotationMatrix(), np.array([-4, 1, 1]))
-        goal_pose = RigidTransform(
-            R=RotationMatrix(), 
-            p=np.array(env.bowl_0) + np.array([0.25, 0, 0.25])
-        )
+
+        X_WGinit = start_pose
+
+        # handle intermediate poses
+        times = [start_time]
+        if intermediate_poses is not None:
+            # linear interpolation between intermediate poses
+            intermediate_times = np.linspace(start_time, start_time + move_time, len(intermediate_poses)+2)[1:-1]
+            times.extend(intermediate_times)
+        times.append(start_time + move_time)
+
+        # handle intermediate poses
+        moves = [X_WGinit]
+        if intermediate_poses is not None:
+            moves.extend(intermediate_poses)
+        moves.append(goal_pose)
+
         poses = PiecewisePose.MakeLinear(
-            [start_time, 
-             start_time + move_time / 4, 
-             start_time + 3 * move_time / 4, 
-             start_time + move_time],
-            [X_WGinit, int_1, int_2, goal_pose]
+            times,
+            moves
         )
         return poses
 
