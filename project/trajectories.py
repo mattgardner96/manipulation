@@ -102,6 +102,8 @@ class PizzaRobotState(Enum):
     FIX_BASE = 6
     EVAL_PIZZA_STATE = 7
     CLOSE_GRIPPER = 8
+    OPEN_GRIPPER = 9
+    LOCK_ARM = 10
 
 
 class PizzaPlanner(LeafSystem):
@@ -368,11 +370,10 @@ class PizzaPlanner(LeafSystem):
             state.get_mutable_discrete_state().set_value(self._current_iiwa_positions_idx, q_current)
 
             # keep the arm on the ground for now.
-            joint_vels = self.fix_base_position(context, [0, 0, 1])
+            joint_vels = self.calc_limits_fix_base_position(context, [0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, joint_vels)
 
             transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
-        
         
         # ----------------- PLAN IIWA_PAINTER ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_IIWA_PAINTER:
@@ -387,16 +388,13 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FIX_BASE)
             print("Transitioning to EXECUTE_IIWA_PAINTER FSM state.")
 
-
         # ----------------- FIX BASE ----------------- #
         elif fsm_state_value == PizzaRobotState.FIX_BASE:
-            new_joint_lims = self.fix_base_position(context, [0, 0, 1])
+            new_joint_lims = self.calc_limits_fix_base_position(context, [0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
 
-            mutable_fsm_state.set_value(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
-            print("Transitioning to EXECUTE_PLANNED_TRAJECTORY state.")
+            transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
         
-
 
         # ----------------- PLAN TRAJECTORY_0 ----------------- #
         elif fsm_state_value == PizzaRobotState.PLAN_TRAJ_0:
@@ -424,25 +422,41 @@ class PizzaPlanner(LeafSystem):
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
 
+
         # ----------------- CLOSE GRIPPER ----------------- #
         elif fsm_state_value == PizzaRobotState.CLOSE_GRIPPER:
             start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
+            
+            # runs this once, 
             if not hasattr(self, '_gripper_traj'):
-                self._gripper_traj = self._close_gripper_traj(
-                    context,
-                    start_gripper_position=start_gripper_position,
-                    start_time_s=current_time
-
-                )
+                self._gripper_traj = self._close_gripper_traj(context,start_gripper_position,current_time)
             gripper_traj = self._gripper_traj
 
             gripper_position_desired = gripper_traj.value(current_time)
-            print(f"{gripper_position_desired=}")
             state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
             
             if current_time >= gripper_traj.end_time():
-                mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
-                print("Transitioning to FINISHED state.")
+                del(self._gripper_traj)
+                transition_to_state(PizzaRobotState.OPEN_GRIPPER)
+
+        # ----------------- OPEN GRIPPER ----------------- #
+        elif fsm_state_value == PizzaRobotState.OPEN_GRIPPER:
+            start_gripper_position = context.get_discrete_state(self._gripper_position_idx).get_value()[0]
+            if not hasattr(self, '_gripper_traj'):
+                self._gripper_traj = self._open_gripper_traj(
+                    context,
+                    start_gripper_position,
+                    start_time_s=current_time) # start immediately on state transition
+            gripper_traj = self._gripper_traj
+
+            gripper_position_desired = gripper_traj.value(current_time)
+            state.get_mutable_discrete_state().get_mutable_vector(self._gripper_position_idx).set_value(gripper_position_desired)
+            
+            if current_time >= gripper_traj.end_time():
+                del(self._gripper_traj)
+                transition_to_state(PizzaRobotState.FINISHED)
+
+        
         
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
@@ -464,10 +478,8 @@ class PizzaPlanner(LeafSystem):
             print("Task is finished.")
 
 
-    def fix_base_position(self, context: Context, xyz_fixed):
+    def calc_limits_fix_base_position(self, context: Context, xyz_fixed):
         tolerance = 1e-3
-        # Get nominal joint positions
-        nominal_joint_positions = context.get_discrete_state(self._nominal_joint_position_idx).get_value()
 
         # Get mutable joint velocity limits from discrete state
         joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
@@ -486,6 +498,16 @@ class PizzaPlanner(LeafSystem):
                 new_joint_velocity_limits[i] = init_vels[i]
                 new_joint_velocity_limits[i + self._num_joint_positions] = init_vels[i + self._num_joint_positions]
 
+        return new_joint_velocity_limits
+
+
+    def set_arm_locked(self, context: Context, locked):
+        joint_velocity_limits = context.get_mutable_discrete_state(self._joint_velocity_limits_idx).get_value()
+        new_joint_velocity_limits = np.copy(joint_velocity_limits)
+        init_vels = np.array(self._initial_diff_ik_params.get_joint_velocity_limits()).flatten()
+
+        new_joint_velocity_limits[3:] = 0.0 if locked else init_vels[3:]
+        
         return new_joint_velocity_limits
     
 
