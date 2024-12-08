@@ -413,7 +413,19 @@ class PizzaPlanner(LeafSystem):
                 p=env.bowl_0 + np.array([0.5, 0, 0.3])
             )
 
-            if self._ik_move_to_posn(context, state, goal_pose) == True:
+            if self._ik_move_to_posn(context, state, goal_pose) == False:
+                return
+
+            # gets stuck replanning the second move.
+            # goal_pose = RigidTransform(
+            #     R=curr_pose.rotation(),
+            #     p=env.bowl_0 + np.array([0.03, 0, 0.15])
+            # )
+
+            # if self._ik_move_to_posn(context, state, goal_pose) == False:
+            #     return
+
+            if self.gripper_action(context, current_time, state, "close") == True:
                 transition_to_state(PizzaRobotState.FINISHED)
         
         # ----------------- EVALUATE PIZZA STATE ----------------- #
