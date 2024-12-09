@@ -508,7 +508,7 @@ class PizzaPlanner(LeafSystem):
 
             # self._area_of_pizza = ps.calculate_pizza_area(points, colors)
 
-            mushroom_ratio = ps.calculate_mushroom_to_pizza_ratio(points, colors, self._pizza_area)
+            mushroom_ratio = ps.calculate_mushroom_to_pizza_ratio(points, colors, self._pizza_area,True,True)
             print(f"{mushroom_ratio=}")
 
             if mushroom_ratio >= MUSHROOM_THRESHOLD_PERCENT:
