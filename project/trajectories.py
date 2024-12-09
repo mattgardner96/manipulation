@@ -473,7 +473,7 @@ class PizzaPlanner(LeafSystem):
 
             transition_to_state(PizzaRobotState.PROX_MOVE_TO_BOWL_1)
 
-        # ----------------- TEST IK MOVE ----------------- #
+        # ----------------- PROX MOVE TO BOWL 1 ----------------- #
         elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
 
             set_control_mode("joint")
@@ -536,15 +536,41 @@ class PizzaPlanner(LeafSystem):
         elif fsm_state_value == PizzaRobotState.SHIMMY_SHAKE:
             set_control_mode("diff_ik")
 
+            # lock the base in x and z
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[1,0,1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
 
             # shimmy shake
-            shimmy_traj = self._get_shimmy_traj(context,num_keyframes=50,amplitude=0.1,frequency=100)
+            shimmy_traj = self._get_shimmy_traj(
+                context,
+                num_keyframes=50,
+                amplitude=0.1,
+                frequency=100
+            )
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(shimmy_traj)
 
             transition_to_state(PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY)
         
+                
+
+        # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
+        elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
+            
+            set_control_mode("diff_ik")
+
+            pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
+
+            if current_time >= pose_traj.start_time_s:
+                elapsed_time = current_time - pose_traj.start_time_s
+                desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
+                state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
+            
+            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
+                transition_to_state(PizzaRobotState.FINISHED)
+
         # ----------------- EVALUATE PIZZA STATE ----------------- #
         elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
             # print("Evaluating pizza state.")
@@ -559,21 +585,6 @@ class PizzaPlanner(LeafSystem):
 
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
-                
-
-        # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
-        elif fsm_state_value == PizzaRobotState.EXECUTE_PLANNED_TRAJECTORY:
-
-            pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
-
-            if current_time >= pose_traj.start_time_s:
-                elapsed_time = current_time - pose_traj.start_time_s
-                desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
-                state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
-            
-            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
-                transition_to_state(PizzaRobotState.FINISHED)
-
 
         # ----------------- FINISHED ----------------- #
         elif fsm_state_value == PizzaRobotState.FINISHED:
