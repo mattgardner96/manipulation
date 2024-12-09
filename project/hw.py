@@ -195,6 +195,9 @@ def AddMobileIiwaDifferentialIK(
     diff_ik_builder.ExportInput(
         differential_ik.GetInputPort("X_AE_desired"), "X_AE_desired"
     )
+    diff_ik_builder.ExportInput(
+        differential_ik.GetInputPort("use_robot_state"), "use_robot_state"
+    )
 
     # Export the output port
     diff_ik_builder.ExportOutput(differential_ik.get_output_port(), "joint_positions")
@@ -387,6 +390,10 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     builder.Connect(
         state_machine.GetOutputPort("nominal_joint_position"),
         controller.GetInputPort("nominal_joint_position")
+    )
+    builder.Connect(
+        state_machine.GetOutputPort("reset_diff_ik"),
+        controller.GetInputPort("use_robot_state")
     )
     
     # camera ports
