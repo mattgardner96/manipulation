@@ -414,7 +414,7 @@ class PizzaPlanner(LeafSystem):
             # default to diffIK
             print("control mode before",self.GetOutputPort("control_mode").Eval(context))
             
-            set_control_mode("diff_ik")
+            set_control_mode("joint")
             
             print("control mode after",self.GetOutputPort("control_mode").Eval(context))
 
@@ -443,7 +443,8 @@ class PizzaPlanner(LeafSystem):
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
             goal_pose = RigidTransform(
                 R=curr_pose.rotation(),
-                p=env.bowl_1 + np.array([0.12, 0, 0.3])
+                #p=env.bowl_1 + np.array([0.12, 0, 0.3])
+                p=env.bowl_1 + np.array([0.04, 0, 0.3])
             )
 
             if self._ik_move_to_posn(context, state, goal_pose, [0,0,1] ) == False:
@@ -474,7 +475,8 @@ class PizzaPlanner(LeafSystem):
             
             goal_pose = RigidTransform(
                 R=curr_pose.rotation(),
-                p=env.bowl_1 + np.array([0.12, 0, 0.18])
+                #p=env.bowl_1 + np.array([0.12, 0, 0.18])
+                p=env.bowl_1 + np.array([0.04, 0, 0.3])
             )
 
             if self.count == 0:
@@ -484,7 +486,7 @@ class PizzaPlanner(LeafSystem):
             if self.count == 1:
             # close gripper
                 if self.gripper_action(context, current_time, state, "close") == True:
-                    transition_to_state(PizzaRobotState.MOVE_AWAY_FROM_BOWL_1)
+                    transition_to_state(PizzaRobotState.FINISHED)
 
 
         # ----------------- PROX MOVE  ----------------- #

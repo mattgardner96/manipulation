@@ -3,22 +3,22 @@
     <link name="mixing_bowl_body_link">
       <pose>0 0 0 0 0 0</pose>
       <inertial>
-        <mass>0.1</mass>
-        <pose>0.00000 0.05702 -0.00000 0 0 0</pose>
+        <mass>0.3</mass>
+        <pose>0.01395 0.00105 -0.05044 0 0 0</pose>
         <inertia>
-          <ixx>9.61221e-03</ixx>
-          <ixy>-3.13485e-11</ixy>
-          <ixz>-1.83654e-10</ixz>
-          <iyy>1.59110e-02</iyy>
-          <iyz>4.08681e-11</iyz>
-          <izz>9.61222e-03</izz>
+          <ixx>2.00574e-03</ixx>
+          <ixy>-3.33278e-07</ixy>
+          <ixz>-6.38598e-07</ixz>
+          <iyy>3.07379e-04</iyy>
+          <iyz>1.67936e-08</iyz>
+          <izz>1.80096e-03</izz>
         </inertia>
       </inertial>
       <visual name="visual">
         <geometry>
           <mesh>
             <uri>mixing_bowl.obj</uri>
-            <scale>0.0015 0.0015 0.0015</scale>
+            <scale>1.2 1.2 1.2</scale>
           </mesh>
         </geometry>
       </visual>
@@ -30,10 +30,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_001">
@@ -44,10 +41,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_002">
@@ -58,10 +52,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_003">
@@ -72,10 +63,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_004">
@@ -86,10 +74,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_005">
@@ -100,10 +85,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_006">
@@ -114,10 +96,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_007">
@@ -128,10 +107,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_008">
@@ -142,10 +118,7 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
       <collision name="collision_009">
@@ -156,10 +129,601 @@
           </mesh>
         </geometry>
         <drake:proximity_properties>
-          <drake:compliant_hydroelastic/>
-          <drake:hydroelastic_modulus>1.000e+05</drake:hydroelastic_modulus>
-          <drake:mu_static>0.9</drake:mu_static>
-          <drake:mu_dynamic>0.9</drake:mu_dynamic>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_010">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_010.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_011">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_011.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_012">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_012.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_013">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_013.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_014">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_014.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_015">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_015.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_016">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_016.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_017">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_017.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_018">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_018.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_019">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_019.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_020">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_020.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_021">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_021.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_022">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_022.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_023">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_023.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_024">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_024.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_025">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_025.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_026">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_026.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_027">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_027.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_028">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_028.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_029">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_029.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_030">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_030.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_031">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_031.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_032">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_032.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_033">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_033.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_034">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_034.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_035">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_035.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_036">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_036.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_037">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_037.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_038">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_038.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_039">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_039.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_040">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_040.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_041">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_041.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_042">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_042.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_043">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_043.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_044">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_044.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_045">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_045.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_046">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_046.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_047">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_047.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_048">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_048.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_049">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_049.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_050">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_050.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_051">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_051.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_052">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_052.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_053">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_053.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_054">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_054.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_055">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_055.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_056">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_056.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_057">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_057.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_058">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_058.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_059">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_059.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_060">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_060.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_061">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_061.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_062">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_062.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
+        </drake:proximity_properties>
+      </collision>
+      <collision name="collision_063">
+        <geometry>
+          <mesh>
+            <uri>mixing_bowl_parts/convex_piece_063.obj</uri>
+            <drake:declare_convex/>
+          </mesh>
+        </geometry>
+        <drake:proximity_properties>
+          <drake:rigid_hydroelastic/>
         </drake:proximity_properties>
       </collision>
     </link>
