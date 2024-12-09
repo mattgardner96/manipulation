@@ -619,6 +619,7 @@ class PizzaPlanner(LeafSystem):
             )
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(shimmy_traj)
+            # context.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(shimmy_traj)
 
             transition_to_state(PizzaRobotState.EXECUTE_SHIMMY_SHAKE)
         
@@ -628,14 +629,14 @@ class PizzaPlanner(LeafSystem):
             
             set_control_mode("diff_ik")
 
-            pose_traj = context.get_abstract_state(self._pose_trajectory_idx).get_value()
+            pose_traj = state.get_abstract_state(self._pose_trajectory_idx).get_value()
 
             if current_time >= pose_traj.start_time_s:
                 elapsed_time = current_time - pose_traj.start_time_s
                 desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
                 state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
             
-            if current_time >= pose_traj.trajectory.end_time():
+            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
                 self._eval_required = True
                 transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
 

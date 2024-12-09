@@ -1,7 +1,7 @@
 import numpy as np
 
-NUM_MUSHROOMS = 30
-NUM_TOMATOES = 30
+NUM_MUSHROOMS = 20
+NUM_TOMATOES = 0
 scene_z_offset = -0.25
 bowl_0 = [-2.7, 0.5, 0.73+scene_z_offset]
 bowl_1 = [-2.7, 1.0, 0.73+scene_z_offset]
@@ -178,7 +178,7 @@ simulator_config:
 
 def add_mushroom(scenario_data):
 
-    mushroom_position = bowl_0 + np.array([0,0, 0.02])
+    mushroom_position = bowl_0 + np.array([-0.03,0, 0.02])
     mushroom_instance = mushroom_position
     
     
@@ -202,7 +202,7 @@ def add_mushroom(scenario_data):
     file: package://pizzabot/objects/mush_slice.sdf
     default_free_body_pose:
         mush_slice:
-            translation: ["""+str(mushroom_instance[0])+""", """+str(mushroom_instance[1])+""", """+str(mushroom_instance[2])+"""]
+            translation: ["""+str(mushroom_instance2[0])+""", """+str(mushroom_instance2[1])+""", """+str(mushroom_instance2[2])+"""]
             rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
             
 """
