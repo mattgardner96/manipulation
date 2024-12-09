@@ -1,7 +1,7 @@
 import numpy as np
 
-NUM_MUSHROOMS = 0
-NUM_TOMATOES = 0
+NUM_MUSHROOMS = 30
+NUM_TOMATOES = 30
 scene_z_offset = -0.25
 bowl_0 = [-2.7, 0.5, 0.73+scene_z_offset]
 bowl_1 = [-2.7, 1.0, 0.73+scene_z_offset]
@@ -203,6 +203,7 @@ def add_mushroom(scenario_data):
     default_free_body_pose:
         mush_slice:
             translation: ["""+str(mushroom_instance[0])+""", """+str(mushroom_instance[1])+""", """+str(mushroom_instance[2])+"""]
+            rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
             
 """
     return scenario_data

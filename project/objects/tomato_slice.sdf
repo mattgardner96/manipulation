@@ -4,7 +4,7 @@
     <link name='tomato_slice'>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
-        <mass>0.03</mass>
+        <mass>0.01</mass>
         <inertia>
           <ixx>0.16257480385795609</ixx>
           <ixy>0.009921216437424158</ixy>
