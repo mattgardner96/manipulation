@@ -107,6 +107,7 @@ class PizzaRobotState(Enum):
     PROX_MOVE_TO_BOWL_1 = 8
     MOVE_AWAY_FROM_BOWL_1 = 9
     LIFT_BOWL_1 = 10
+    MOVE_TO_BREADPAN_QUEUE_SHAKE = 11
 
 
 class PizzaPlanner(LeafSystem):
@@ -129,7 +130,8 @@ class PizzaPlanner(LeafSystem):
         # Table 1 workstation placement = (-2.5, 1, 1.5)
         # Oven workstation = (0, 1.5, 1)
         # Delivery workstation = (-0.5, 2, 1)
-        BOWL_APPROACH_OFFSET = np.array([0.15,0.0,0.1])
+        BOWL_APPROACH_OFFSET = np.array([0.148,0.0,0.1])
+        BREADPAN_APPROACH_OFFSET = np.array([0,0.5,0.4])
         self.workstation_poses = {
             "table_0": RigidTransform(
                 RotationMatrix.MakeZRotation(np.pi),
@@ -159,6 +161,11 @@ class PizzaPlanner(LeafSystem):
                 RotationMatrix(),
                 p=[0,0,-0.2]
             ),
+            # absolute pose
+            "breadpan_queue_shake": RigidTransform(
+                RotationMatrix(RollPitchYaw(-np.pi/2, -np.pi/4, 3*np.pi/2)),
+                p=env.pan_position+BREADPAN_APPROACH_OFFSET
+            )
         }
 
         plant_context = self._iiwa_plant.CreateDefaultContext()
@@ -438,13 +445,7 @@ class PizzaPlanner(LeafSystem):
         # ----------------- START ----------------- #
         if fsm_state_value == PizzaRobotState.START:
             
-            # default to diffIK
-            print("control mode before",self.GetOutputPort("control_mode").Eval(context))
-            
             set_control_mode("joint")
-            
-            print("control mode after",self.GetOutputPort("control_mode").Eval(context))
-
 
             #print("Current state: START")
             q_current = self._iiwa_state_estimated_input_port.Eval(context)[:10]
@@ -458,7 +459,6 @@ class PizzaPlanner(LeafSystem):
 
 
             transition_to_state(PizzaRobotState.PROX_MOVE_TO_BOWL_1)
-
 
         # ----------------- TEST IK MOVE ----------------- #
         elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
@@ -484,7 +484,7 @@ class PizzaPlanner(LeafSystem):
                 if self.gripper_action(context, current_time, state, "close") == True:
                     transition_to_state(PizzaRobotState.LIFT_BOWL_1)
 
-    # ----------------- LIFT BOWL 1 ----------------- #
+        # ----------------- LIFT BOWL 1 ----------------- #
         elif fsm_state_value == PizzaRobotState.LIFT_BOWL_1:
 
             set_control_mode("joint")
@@ -501,42 +501,25 @@ class PizzaPlanner(LeafSystem):
                 if self._ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
                     return
             
-            transition_to_state(PizzaRobotState.FINISHED)
+            transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
 
+            print("got here")
+            self.count = 0
 
-        # ----------------- PROX MOVE  ----------------- #
-        elif fsm_state_value == PizzaRobotState.MOVE_AWAY_FROM_BOWL_1:
+        # ----------------- MOVE TO BREADPAN QUEUE SHAKE ----------------- #
+        elif fsm_state_value == PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE:
+
 
             set_control_mode("joint")
-            
-            # # lock z, unlock xy
-            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0,0,1])
-            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
 
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
-            # goal_pose = self.GetOutputPort("desired_pose").Eval(context) @ RigidTransform(
-            #     R=RotationMatrix(),
-            #     p=[0,0,-0.15]
-            # )
-            
-            goal_pose = RigidTransform(
-                R=curr_pose.rotation(),
-                p=np.array([0,0,0.65])
-            )
+            goal_pose = self.workstation_poses["breadpan_queue_shake"]
 
             if self.count == 0:
-                if self._ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
+                if self._ik_move_to_posn(context, state, goal_pose, [0,0,1],move_time=4) == False:
                     return
-            
+
             transition_to_state(PizzaRobotState.FINISHED)
-            # if self.count == 1:
-            # # close gripper
-            #     if self.gripper_action(context, current_time, state, "close") == True:
-            #         transition_to_state(PizzaRobotState.FINISHED)
-
-
-
-
 
         
         # ----------------- EVALUATE PIZZA STATE ----------------- #
@@ -553,37 +536,6 @@ class PizzaPlanner(LeafSystem):
 
             mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
             print("Transitioning to FINISHED state.")
-
-        # # ----------------- PLAN AND EXECUTE MOVE TO BOWL 0 ----------------- #
-        # elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
-        #     curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
-
-        #     if self._move_to_posn(
-        #         context,
-        #         state, 
-        #         goal_pose=RigidTransform(       
-        #             R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
-        #             p=env.bowl_0 + np.array([0.5, 0, 0.3]),
-        #         )
-        #     ) == False:
-        #         return
-
-        #     # lock the base
-        #     new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[1, 1, 1])
-        #     state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
-        #     print("base locked")
-
-        #     if self._move_to_posn(
-        #         context,
-        #         state, 
-        #         goal_pose=RigidTransform(       
-        #             R=curr_pose.rotation() @ RotationMatrix.MakeYRotation(-np.pi/5),
-        #             p=env.bowl_0 + np.array([0.03, 0, 0.2]),
-        #         )
-        #     ) == False:
-        #         return
-
-        #     transition_to_state(PizzaRobotState.CLOSE_GRIPPER)
                 
 
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
@@ -845,7 +797,7 @@ class PizzaPlanner(LeafSystem):
             return False
 
 
-    def _ik_move_to_posn(self, context: Context, state: State, goal_pose: RigidTransform, fix_base):
+    def _ik_move_to_posn(self, context: Context, state: State, goal_pose: RigidTransform, fix_base, move_time=2.0) -> bool:
         
         if not hasattr(self, '_joint_traj'):
             # Compute the current and goal joint positions
@@ -865,7 +817,6 @@ class PizzaPlanner(LeafSystem):
                 return False  # Movement cannot be performed
 
             # Create a joint trajectory from current to goal positions
-            move_time = 2.0  # Duration of the movement in seconds
             current_time = context.get_time()
             times = [current_time, current_time + move_time]
             knots = np.column_stack((q_current, q_goal))
@@ -888,24 +839,23 @@ class PizzaPlanner(LeafSystem):
     
 
     def shimmy_key_frames(y_start, num_keyframes, X_WCenter, amplitude, frequency):
-    """make shaking movement on top of pizza to spread ingredients"""
+        """make shaking movement on top of pizza to spread ingredients"""
+        key_frame_poses_in_world = []  
+        amplitude = 0.1 
 
-    key_frame_poses_in_world = []  
-    amplitude = 0.1 
+        for i in range(num_keyframes):
+            #Adjust step size here 
+            y_position = y_start - i * 0.01 
+            x_shake = amplitude * np.sin(frequency * y_position) 
+            z_position = 0.0 #can change to shake using z to get ingredients out of bowl
 
-    for i in range(num_keyframes):
-        #Adjust step size here 
-        y_position = y_start - i * 0.01 
-        x_shake = amplitude * np.sin(frequency * y_position) 
-        z_position = 0.0 #can change to shake using z to get ingredients out of bowl
+            position = X_WCenter.translation() + np.array([x_shake, y_position, z_position])
+            rotation_matrix = X_WCenter.rotation()
+            this_pose = RigidTransform(rotation_matrix, position)
+            key_frame_poses_in_world.append(this_pose)
 
-        position = X_WCenter.translation() + np.array([x_shake, y_position, z_position])
-        rotation_matrix = X_WCenter.rotation()
-        this_pose = RigidTransform(rotation_matrix, position)
-        key_frame_poses_in_world.append(this_pose)
-
-    return key_frame_poses_in_world  
-    
+        return key_frame_poses_in_world  
+        
 
 
 

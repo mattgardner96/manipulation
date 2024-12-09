@@ -434,7 +434,7 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     force_limit = builder.AddNamedSystem(
         "force_limit_source",
-        ConstantVectorSource([40]),
+        ConstantVectorSource([500]),
     )
 
 
