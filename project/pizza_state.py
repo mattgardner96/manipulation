@@ -250,13 +250,13 @@ def visualize_clusters_with_hull(filtered_points,filtered_colors, labels):
 
 #Calculate area ratio of ingredients
 
-def calculate_tomato_to_pizza_ratio(points,colors, pizza_area, visualize_point=False, visualize_clusters=False):
+def calculate_tomato_to_pizza_ratio(points, colors, pizza_area, visualize_point=False, visualize_clusters=False):
     target_color = (1, 0, 0)
     filtered_points, filtered_colors = filter_point_cloud_by_color(points, colors, target_color, color_threshold=0.6)
     filtered_points_2d = filtered_points[:, :2]  
     labels = get_clusters(filtered_points_2d)
     area_tomatoes = calculate_total_area(filtered_points_2d, labels)
-    ratio_tomatoes = area_tomatoes/area_of_pizza *100
+    ratio_tomatoes = area_tomatoes/pizza_area *100
     if visualize_point == True:
         visualize_point_cloud(filtered_points, filtered_colors)
     if visualize_clusters == True:
@@ -264,13 +264,13 @@ def calculate_tomato_to_pizza_ratio(points,colors, pizza_area, visualize_point=F
 
     return ratio_tomatoes
 
-def calculate_mushroom_to_pizza_ratio(points,colors, pizza_area, visualize_point=False, visualize_clusters=False):
+def calculate_mushroom_to_pizza_ratio(points, colors, pizza_area, visualize_point=False, visualize_clusters=False):
     target_color = (0.5, 0.4, 0.2)
     filtered_points, filtered_colors = filter_point_cloud_by_color(points, colors, target_color, color_threshold=0.1)
     filtered_points_2d = filtered_points[:, :2]  
     labels = get_clusters(filtered_points_2d)
     area_mushrooms = calculate_total_area(filtered_points_2d, labels)
-    ratio_mushrooms = area_mushrooms/area_of_pizza *100
+    ratio_mushrooms = area_mushrooms/pizza_area *100
     if visualize_point == True:
         visualize_point_cloud(filtered_points, filtered_colors)
     if visualize_clusters == True:

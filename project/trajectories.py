@@ -97,18 +97,27 @@ class PizzaRobotState(Enum):
     """FSM state enumeration"""
 
     START = 0
-    EXECUTE_PLANNED_TRAJECTORY = 1
-    FINISHED = 2
-    EVAL_PIZZA_STATE = 3
-    MOVE_TO_BOWL_0 = 4
-    PUT_BACK_BOWL_0 = 5
-    MOVE_TO_BOWL_1 = 6
-    LIFT_BOWL_0 = 7
-    LIFT_BOWL_1 = 8
-    TEST_IK_MOVE = 9
-    MOVE_TO_BREADPAN_QUEUE_SHAKE = 10
-    SHIMMY_SHAKE = 11
-    EXECUTE_SHIMMY_SHAKE = 12
+    MOVE_TO_BOWL_0 = 1
+    LIFT_BOWL_0 = 2
+    MOVE_TO_BREADPAN = 3
+    SHIMMY_SHAKE = 4
+    EXECUTE_SHIMMY_SHAKE = 5
+    EVAL_PIZZA_STATE = 6
+    RELEASE_BOWL_0 = 7
+    MOVE_TO_BOWL_1 = 8
+    LIFT_BOWL_1 = 9
+    RELEASE_BOWL_1 = 10
+    MOVE_AND_GRASP_BREADPAN = 11
+    LIFT_BREADPAN = 12
+    MOVE_TO_OVEN = 13
+    PUT_BREADPAN_IN_OVEN = 14
+    WAIT_FOR_BAKE = 15
+    REMOVE_BREADPAN = 16
+    MOVE_TO_DELIVERY = 17
+    PUT_BREADPAN_ON_SHELF = 18
+    FINISHED = 19
+    DIFF_IK_MOVE_TO_BREADPAN = 20
+    DUMMY_STATE = 21
 
 
 class PizzaPlanner(LeafSystem):
@@ -127,13 +136,14 @@ class PizzaPlanner(LeafSystem):
         self._num_joint_positions = num_joint_positions
         self.count = 0
         self._eval_required = False
+        self._pizza_area = 0.0934731889206205
 
         # Table 0 workstation = (-1, -0.25, 1.5) 
         # Table 1 workstation placement = (-2.5, 1, 1.5)
         # Oven workstation = (0, 1.5, 1)
         # Delivery workstation = (-0.5, 2, 1)
         BOWL_APPROACH_OFFSET = np.array([0.148,0.0,0.1])
-        BREADPAN_APPROACH_OFFSET = np.array([0,0.5,0.4])
+        BREADPAN_APPROACH_OFFSET = np.array([0,0.4,0.4])
         self.workstation_poses = {
             "table_0": RigidTransform(
                 RotationMatrix.MakeZRotation(np.pi),
@@ -166,7 +176,7 @@ class PizzaPlanner(LeafSystem):
             ),
             # absolute pose
             "breadpan_queue_shake": RigidTransform(
-                RotationMatrix(RollPitchYaw(-np.pi/2, -np.pi/4, 3*np.pi/2)),
+                RotationMatrix(RollPitchYaw(-np.pi/2, np.deg2rad(-35), 3*np.pi/2)),
                 p=env.pan_position+BREADPAN_APPROACH_OFFSET
             )
         }
@@ -475,29 +485,37 @@ class PizzaPlanner(LeafSystem):
 
             transition_to_state(PizzaRobotState.MOVE_TO_BOWL_0)
 
+
         # ----------------- EVALUATE PIZZA STATE ----------------- #
         elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
-            PIZZA_COVERED_THRESHOLD = 0.7
+            MUSHROOM_THRESHOLD_PERCENT = 13
             
-            if self._eval_required:
-                # print("Evaluating pizza state.")
-                point_cloud = self._grab_point_cloud(context)
+            if self._eval_required == False:
+                transition_to_state(PizzaRobotState.SHIMMY_SHAKE)
+                self.count = 0
+                self._eval_required = True
+                return 
+                
+            # print("Evaluating pizza state.")
+            point_cloud = self._grab_point_cloud(context)
 
-                # test code
-                points = point_cloud.xyzs().T
-                print(points)
-                colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
-                area_of_pizza = ps.calculate_pizza_area(points, colors)
-                print(area_of_pizza)
-                self._eval_required = False
+                # points = point_cloud.xyzs().T
+                # points = point_cloud.xyzs().T
+                # print(points)
+            points = point_cloud.xyzs().T
+                # print(points)
+            colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
 
-            # TODO: real logic here
+            # self._area_of_pizza = ps.calculate_pizza_area(points, colors)
 
-            if area_of_pizza >= PIZZA_COVERED_THRESHOLD:
-                transition_to_state(PizzaRobotState.PUT_BACK_BOWL_0)
+            mushroom_ratio = ps.calculate_mushroom_to_pizza_ratio(points, colors, self._pizza_area)
+            print(f"{mushroom_ratio=}")
+
+            if mushroom_ratio >= MUSHROOM_THRESHOLD_PERCENT:
+                transition_to_state(PizzaRobotState.RELEASE_BOWL_0)
                 self.count = 0
             else:
-                transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+                transition_to_state(PizzaRobotState.SHIMMY_SHAKE)
                 self.count = 0
             
 
@@ -537,7 +555,7 @@ class PizzaPlanner(LeafSystem):
                     return
             
             self.count = 0
-            transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+            transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN)
 
 
 
@@ -578,15 +596,11 @@ class PizzaPlanner(LeafSystem):
                 if self._diff_ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
                     return
             
-            transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+            transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN)
             self.count = 0
 
         # ----------------- MOVE TO BREADPAN QUEUE SHAKE ----------------- #
-        elif fsm_state_value == PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE:
-            
-            if self._eval_required:
-                transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
-                return
+        elif fsm_state_value == PizzaRobotState.MOVE_TO_BREADPAN:
 
             set_control_mode("joint")
 
@@ -597,8 +611,8 @@ class PizzaPlanner(LeafSystem):
                 if self._ik_move_to_posn(context, state, goal_pose, [0,0,1],move_time=4) == False:
                     return
 
-            transition_to_state(PizzaRobotState.SHIMMY_SHAKE)
-
+            transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
+            self.count = 0
 
         # ----------------- SHIMMY SHAKE ----------------- #
         elif fsm_state_value == PizzaRobotState.SHIMMY_SHAKE:
@@ -613,9 +627,9 @@ class PizzaPlanner(LeafSystem):
             # shimmy shake
             shimmy_traj = self._get_shimmy_traj(
                 context,
-                num_keyframes=20,
-                amplitude=0.1,
-                frequency=100
+                num_keyframes=25,
+                amplitude=0.03,
+                frequency=30
             )
 
             state.get_mutable_abstract_state(self._pose_trajectory_idx).set_value(shimmy_traj)
@@ -637,17 +651,37 @@ class PizzaPlanner(LeafSystem):
                 state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
             
             if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
-                self._eval_required = True
-                transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+                transition_to_state(PizzaRobotState.DIFF_IK_MOVE_TO_BREADPAN)
+                self.count = 0
 
+        # ----------------- DIFF IK MOVE TO BREADPAN ----------------- #
+        elif fsm_state_value == PizzaRobotState.DIFF_IK_MOVE_TO_BREADPAN:
+            set_control_mode("diff_ik")
+
+            # lock the base in x and z
+            new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[1,0,1])
+            state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
+            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+            goal_pose = self.workstation_poses["breadpan_queue_shake"]
+
+            if self.count == 0:
+                if self._diff_ik_move_to_posn(context, state, goal_pose, [0,0,1]) == False:
+                    return
+
+            transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
+        
 
         # ----------------- PUT BACK BOWL 1 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PUT_BACK_BOWL_0:
+        elif fsm_state_value == PizzaRobotState.RELEASE_BOWL_0:
 
             set_control_mode("joint")
 
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
-            goal_pose = self.workstation_poses["bowl_0"] @ self.workstation_poses["bowl_lift_relative"]
+            goal_pose = self.workstation_poses["bowl_0"] @ RigidTransform(
+                RotationMatrix(),
+                p=[0.05,0,0]
+            )
 
             if self.count == 0:
                 if self._ik_move_to_posn(context, state, goal_pose, [0,0,1] ) == False:
@@ -656,25 +690,26 @@ class PizzaPlanner(LeafSystem):
             if self.count == 1:
                 # open gripper
                 if self.gripper_action(context, current_time, state, "open") == True:
-                    transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
+                    transition_to_state(PizzaRobotState.FINISHED)
+
 
 
         
 
         # ----------------- EVALUATE PIZZA STATE ----------------- #
-        elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
-            # print("Evaluating pizza state.")
-            point_cloud = self._grab_point_cloud(context)
+        # elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
+        #     # print("Evaluating pizza state.")
+        #     point_cloud = self._grab_point_cloud(context)
 
-            # test code
-            points = point_cloud.xyzs().T
-            print(points)
-            colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
-            area_of_pizza = ps.calculate_pizza_area(points, colors)
-            print(area_of_pizza)
+        #     # test code
+        #     points = point_cloud.xyzs().T
+        #     print(points)
+        #     colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
+        #     area_of_pizza = ps.calculate_pizza_area(points, colors)
+        #     print(area_of_pizza)
 
-            mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
-            print("Transitioning to FINISHED state.")
+        #     mutable_fsm_state.set_value(PizzaRobotState.FINISHED)
+        #     print("Transitioning to FINISHED state.")
 
         # ----------------- FINISHED ----------------- #
         elif fsm_state_value == PizzaRobotState.FINISHED:
@@ -737,18 +772,18 @@ class PizzaPlanner(LeafSystem):
         start_time: time to start the trajectory (default is current time)
         move_time: elapsed time of trajectory
         '''
-        if not start_time:
-            start_time = context.get_time()
+        if start_time is None:
+            start_time = 0.0
 
         X_WGinit = start_pose
 
         # handle intermediate poses
-        times = [start_time]
+        times = [0.0]
         if intermediate_poses is not None:
             # linear interpolation between intermediate poses
-            intermediate_times = np.linspace(start_time, start_time + move_time, len(intermediate_poses)+2)[1:-1]
+            intermediate_times = np.linspace(0.0, move_time, len(intermediate_poses)+2)[1:-1]
             times.extend(intermediate_times)
-        times.append(start_time + move_time)
+        times.append(move_time)
 
         # handle intermediate poses
         moves = [X_WGinit]
@@ -943,7 +978,7 @@ class PizzaPlanner(LeafSystem):
 
             # Create a joint trajectory from current to goal positions
             current_time = context.get_time()
-            times = [current_time, current_time + move_time]
+            times = [0.0, move_time]
             knots = np.column_stack((q_current, q_goal))
             self._joint_traj = PiecewisePolynomial.FirstOrderHold(times, knots)
             self._joint_traj_start_time = current_time
@@ -969,23 +1004,24 @@ class PizzaPlanner(LeafSystem):
         X_WG_init = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
         y_start = X_WG_init.translation()[1]
         start_time_s = context.get_time()
-        move_time = 5
+        move_time = 4
        
         key_frame_poses_in_world = []  
-        amplitude = 0.1 
 
         for i in range(num_keyframes):
             #Adjust step size here 
-            y_position = y_start - i * 0.01 
+            y_position = y_start - i * 0.02
             x_shake = amplitude * np.sin(frequency * y_position) 
+            y_shake = amplitude* 0.2 * np.sin(frequency * y_position) 
+            # z_shake = amplitude*0.5 * np.cos(frequency * y_position)
             z_position = 0.0 #can change to shake using z to get ingredients out of bowl
 
-            position = X_WG_init.translation() + np.array([x_shake, y_position, z_position])
+            position = X_WG_init.translation() + np.array([x_shake, y_position+y_shake, z_position])
             rotation_matrix = X_WG_init.rotation()
             this_pose = RigidTransform(rotation_matrix, position)
             key_frame_poses_in_world.append(this_pose)
 
-        times = np.linspace(start_time_s, start_time_s + move_time, len(key_frame_poses_in_world))
+        times = np.linspace(0, move_time, len(key_frame_poses_in_world))
         trajectory = PiecewisePose.MakeLinear(times, key_frame_poses_in_world)
         return PiecewisePoseWithTimingInformation(
             trajectory=trajectory,

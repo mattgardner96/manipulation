@@ -4,7 +4,7 @@
     <link name='mush_slice'>
       <inertial>
         <pose>-0.0012164335362778158 0.005646334501124053 0.006440795931913233 0 0 0</pose>
-        <mass>0.005</mass>
+        <mass>0.01</mass>
         <inertia>
           <ixx>1.111559976609364e-06</ixx>
           <ixy>-6.967256454388697e-08</ixy>
@@ -40,6 +40,8 @@
           <drake:compliant_hydroelastic/>
           <drake:mesh_resolution_hint>1.0e-2</drake:mesh_resolution_hint>
           <drake:hydroelastic_modulus>1.0e5</drake:hydroelastic_modulus>
+          <drake:mu_static>0.2</drake:mu_static>
+          <drake:mu_dynamic>0.2</drake:mu_dynamic>
         </drake:proximity_properties>
       </collision>
     </link>
