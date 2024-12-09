@@ -887,6 +887,26 @@ class PizzaPlanner(LeafSystem):
             return True  # Movement completed
     
 
+    def shimmy_key_frames(y_start, num_keyframes, X_WCenter, amplitude, frequency):
+    """make shaking movement on top of pizza to spread ingredients"""
+
+    key_frame_poses_in_world = []  
+    amplitude = 0.1 
+
+    for i in range(num_keyframes):
+        #Adjust step size here 
+        y_position = y_start - i * 0.01 
+        x_shake = amplitude * np.sin(frequency * y_position) 
+        z_position = 0.0 #can change to shake using z to get ingredients out of bowl
+
+        position = X_WCenter.translation() + np.array([x_shake, y_position, z_position])
+        rotation_matrix = X_WCenter.rotation()
+        this_pose = RigidTransform(rotation_matrix, position)
+        key_frame_poses_in_world.append(this_pose)
+
+    return key_frame_poses_in_world  
+    
+
 
 
     #example use of function: 
@@ -898,4 +918,14 @@ class PizzaPlanner(LeafSystem):
     #fix_base example:
     #new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
     #state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
+
+    #shimmy function example: 
+    # y_start = 0  # Starting at y = 1 meter
+    # num_keyframes = 20  # Generate 50 keyframes
+    # amplitude = 0.1  # 20 cm total shake
+    # frequency = 100  # Oscillate at 2 Hz
+    # key_frame_poses = [X_WGinit] + shimmy_key_frames(y_start, num_keyframes, X_WCenter, amplitude, frequency)
+    # times = np.linspace(0, total_time, num_keyframes + 1)
+    # traj = PiecewisePose.MakeLinear(times, key_frame_poses)
+
 
