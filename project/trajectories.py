@@ -476,7 +476,7 @@ class PizzaPlanner(LeafSystem):
             goal_pose = RigidTransform(
                 R=curr_pose.rotation(),
                 #p=env.bowl_1 + np.array([0.12, 0, 0.18])
-                p=env.bowl_1 + np.array([0.04, 0, 0.3])
+                p=env.bowl_1 + np.array([0.03, 0, 0.18])
             )
 
             if self.count == 0:
@@ -486,7 +486,7 @@ class PizzaPlanner(LeafSystem):
             if self.count == 1:
             # close gripper
                 if self.gripper_action(context, current_time, state, "close") == True:
-                    transition_to_state(PizzaRobotState.FINISHED)
+                    transition_to_state(PizzaRobotState.MOVE_AWAY_FROM_BOWL_1)
 
 
         # ----------------- PROX MOVE  ----------------- #

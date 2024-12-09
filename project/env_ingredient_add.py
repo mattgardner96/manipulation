@@ -162,7 +162,7 @@ model_drivers:
 
 plant_config = """
 plant_config:
-    time_step: 1e-2
+    time_step: 1e-3
     #contact_model: "hydroelastic_with_fallback"
     contact_model: "point"
     discrete_contact_approximation: "sap"
@@ -172,7 +172,7 @@ visualization:
     publish_contacts: false # Looks much better but maybe harder to debug contact
 
 simulator_config:
-    accuracy: 1e-2
+    accuracy: 1e-3
     integration_scheme: runge_kutta3
 """
 
