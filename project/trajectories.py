@@ -101,14 +101,14 @@ class PizzaRobotState(Enum):
     FINISHED = 2
     EVAL_PIZZA_STATE = 3
     MOVE_TO_BOWL_0 = 4
-    MOVE_TO_BOWL_1 = 5
-    TEST_IK_MOVE = 7
-    PROX_MOVE_TO_BOWL_1 = 8
-    MOVE_AWAY_FROM_BOWL_1 = 9
-    LIFT_BOWL_1 = 10
-    MOVE_TO_BREADPAN_QUEUE_SHAKE = 11
-    SHIMMY_SHAKE = 12
-    EXECUTE_SHIMMY_SHAKE = 13
+    PUT_BACK_BOWL_0 = 5
+    MOVE_TO_BOWL_1 = 6
+    LIFT_BOWL_0 = 7
+    LIFT_BOWL_1 = 8
+    TEST_IK_MOVE = 9
+    MOVE_TO_BREADPAN_QUEUE_SHAKE = 10
+    SHIMMY_SHAKE = 11
+    EXECUTE_SHIMMY_SHAKE = 12
 
 
 class PizzaPlanner(LeafSystem):
@@ -126,6 +126,7 @@ class PizzaPlanner(LeafSystem):
         self._gripper_body_index = gripper_body.index()
         self._num_joint_positions = num_joint_positions
         self.count = 0
+        self._eval_required = False
 
         # Table 0 workstation = (-1, -0.25, 1.5) 
         # Table 1 workstation placement = (-2.5, 1, 1.5)
@@ -153,14 +154,15 @@ class PizzaPlanner(LeafSystem):
                 RotationMatrix(RollPitchYaw(0,-np.pi/2,np.pi/2)),
                 np.array(env.bowl_0)+BOWL_APPROACH_OFFSET
             ),
-            # proximity move to approach any bowl.
-            "bowl_lift": RigidTransform(
+            # proximity move to approach any bowl. relative
+            "bowl_lift_relative": RigidTransform(
                 RotationMatrix(),
                 p=[0.2,0,0]
             ),
-            "bowl_put_down": RigidTransform(
+            # proximity move to approach any bowl. relative
+            "bowl_lower_relative": RigidTransform(
                 RotationMatrix(),
-                p=[0,0,-0.2]
+                p=[-0.2,0,0]
             ),
             # absolute pose
             "breadpan_queue_shake": RigidTransform(
@@ -471,7 +473,34 @@ class PizzaPlanner(LeafSystem):
             new_joint_lims = self.calc_limits_fix_base_position(context, xyz_fixed=[0, 0, 1])
             state.get_mutable_discrete_state().set_value(self._joint_velocity_limits_idx, new_joint_lims)
 
-            transition_to_state(PizzaRobotState.PROX_MOVE_TO_BOWL_0)
+            transition_to_state(PizzaRobotState.MOVE_TO_BOWL_0)
+
+        # ----------------- EVALUATE PIZZA STATE ----------------- #
+        elif fsm_state_value == PizzaRobotState.EVAL_PIZZA_STATE:
+            PIZZA_COVERED_THRESHOLD = 0.7
+            
+            if self._eval_required:
+                # print("Evaluating pizza state.")
+                point_cloud = self._grab_point_cloud(context)
+
+                # test code
+                points = point_cloud.xyzs().T
+                print(points)
+                colors = point_cloud.rgbs().T.reshape(-1, 3)/255.0
+                area_of_pizza = ps.calculate_pizza_area(points, colors)
+                print(area_of_pizza)
+                self._eval_required = False
+
+            # TODO: real logic here
+
+            if area_of_pizza >= PIZZA_COVERED_THRESHOLD:
+                transition_to_state(PizzaRobotState.PUT_BACK_BOWL_0)
+                self.count = 0
+            else:
+                transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+                self.count = 0
+            
+
 
         # ----------------- MOVE TO BOWL 0 ----------------- #
         elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_0:
@@ -490,6 +519,7 @@ class PizzaPlanner(LeafSystem):
                 if self.gripper_action(context, current_time, state, "close") == True:
                     transition_to_state(PizzaRobotState.LIFT_BOWL_0)
         
+
         # ----------------- LIFT BOWL 0 ----------------- #
         elif fsm_state_value == PizzaRobotState.LIFT_BOWL_0:
             set_control_mode("diff_ik")
@@ -500,7 +530,7 @@ class PizzaPlanner(LeafSystem):
 
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
             
-            goal_pose = curr_pose @ self.workstation_poses["bowl_lift"]
+            goal_pose = curr_pose @ self.workstation_poses["bowl_lift_relative"]
 
             if self.count == 0:
                 if self._diff_ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
@@ -509,8 +539,10 @@ class PizzaPlanner(LeafSystem):
             self.count = 0
             transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
 
+
+
         # ----------------- PROX MOVE TO BOWL 1 ----------------- #
-        elif fsm_state_value == PizzaRobotState.PROX_MOVE_TO_BOWL_1:
+        elif fsm_state_value == PizzaRobotState.MOVE_TO_BOWL_1:
 
             set_control_mode("joint")
 
@@ -528,6 +560,7 @@ class PizzaPlanner(LeafSystem):
                 if self.gripper_action(context, current_time, state, "close") == True:
                     transition_to_state(PizzaRobotState.LIFT_BOWL_1)
 
+
         # ----------------- LIFT BOWL 1 ----------------- #
         elif fsm_state_value == PizzaRobotState.LIFT_BOWL_1:
 
@@ -539,18 +572,21 @@ class PizzaPlanner(LeafSystem):
 
             curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
             
-            goal_pose = curr_pose @ self.workstation_poses["bowl_lift"]
+            goal_pose = curr_pose @ self.workstation_poses["bowl_lift_relative"]
 
             if self.count == 0:
                 if self._diff_ik_move_to_posn(context, state, goal_pose,[0,0,1]) == False:
                     return
             
             transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
-
             self.count = 0
 
         # ----------------- MOVE TO BREADPAN QUEUE SHAKE ----------------- #
         elif fsm_state_value == PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE:
+            
+            if self._eval_required:
+                transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
+                return
 
             set_control_mode("joint")
 
@@ -562,6 +598,7 @@ class PizzaPlanner(LeafSystem):
                     return
 
             transition_to_state(PizzaRobotState.SHIMMY_SHAKE)
+
 
         # ----------------- SHIMMY SHAKE ----------------- #
         elif fsm_state_value == PizzaRobotState.SHIMMY_SHAKE:
@@ -576,7 +613,7 @@ class PizzaPlanner(LeafSystem):
             # shimmy shake
             shimmy_traj = self._get_shimmy_traj(
                 context,
-                num_keyframes=50,
+                num_keyframes=20,
                 amplitude=0.1,
                 frequency=100
             )
@@ -585,7 +622,6 @@ class PizzaPlanner(LeafSystem):
 
             transition_to_state(PizzaRobotState.EXECUTE_SHIMMY_SHAKE)
         
-                
 
         # ----------------- EXECUTE PLANNED TRAJECTORY ----------------- #
         elif fsm_state_value == PizzaRobotState.EXECUTE_SHIMMY_SHAKE:
@@ -599,8 +635,28 @@ class PizzaPlanner(LeafSystem):
                 desired_pose = pose_traj.trajectory.GetPose(elapsed_time)
                 state.get_mutable_abstract_state(self._desired_pose_idx).set_value(desired_pose)
             
-            if current_time >= pose_traj.start_time_s + pose_traj.trajectory.end_time():
-                transition_to_state(PizzaRobotState.FINISHED)
+            if current_time >= pose_traj.trajectory.end_time():
+                self._eval_required = True
+                transition_to_state(PizzaRobotState.MOVE_TO_BREADPAN_QUEUE_SHAKE)
+
+
+        # ----------------- PUT BACK BOWL 1 ----------------- #
+        elif fsm_state_value == PizzaRobotState.PUT_BACK_BOWL_0:
+
+            set_control_mode("joint")
+
+            curr_pose = self._body_poses_input_port.Eval(context)[self._gripper_body_index]
+            goal_pose = self.workstation_poses["bowl_0"] @ self.workstation_poses["bowl_lift_relative"]
+
+            if self.count == 0:
+                if self._ik_move_to_posn(context, state, goal_pose, [0,0,1] ) == False:
+                    return
+            
+            if self.count == 1:
+                # open gripper
+                if self.gripper_action(context, current_time, state, "open") == True:
+                    transition_to_state(PizzaRobotState.EVAL_PIZZA_STATE)
+
 
         
 
