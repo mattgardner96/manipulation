@@ -170,8 +170,9 @@ def AddMobileIiwaDifferentialIK(
             nominal_joint_position = self.get_input_port(2).Eval(context)
             params.set_nominal_joint_position(nominal_joint_position)
 
-            # print(self._diff_ik_system.GetPositions(context).shape)
-            # self._diff_ik_system.SetPositions(context, np.append(nominal_joint_position,np.zeros(30)))
+            # TODO: fix diff_ik switch
+            # print(f"{self._diff_ik_system.get_parameters().get_num_positions()=}")
+            # self._diff_ik_system.SetPositions(context, nominal_joint_position.reshape(-1,1))
 
             # Update joint centering gains
             # joint_centering_gains = self.get_input_port(3).Eval(context)
@@ -326,7 +327,6 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
     Nicholas does this with a port controlling "reset_diff_ik" on the integrator. It's just a boolean.
     On the integrator side, he's got the integrator wrapped in a 
     '''
-
     pos_to_state_sys = builder.AddSystem(
         StateInterpolatorWithDiscreteDerivative(
             num_positions,
@@ -334,7 +334,6 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
             suppress_initial_transient=True,
         )
     )
-
     if traj is not None:
         traj_source = builder.AddSystem(PoseTrajectorySource(traj))
 
@@ -342,17 +341,14 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
         #     traj_source.get_output_port(),
         #     controller.get_input_port(0),
         # )
-
     builder.Connect(
         station.GetOutputPort("mobile_iiwa.state_estimated"),
         controller.GetInputPort("robot_state"),
     )
-
     # builder.Connect(
     #     controller.get_output_port(),
     #     pos_to_state_sys.get_input_port(),
     # )
-
     builder.Connect(
         pos_to_state_sys.get_output_port(),
         station.GetInputPort("mobile_iiwa.desired_state")
@@ -438,7 +434,7 @@ def init_builder(meshcat, scenario, traj=PiecewisePose()):
 
     force_limit = builder.AddNamedSystem(
         "force_limit_source",
-        ConstantVectorSource([2000]),
+        ConstantVectorSource([40]),
     )
 
 
