@@ -1,7 +1,7 @@
 import numpy as np
 
 NUM_MUSHROOMS = 30
-NUM_TOMATOES = 30
+NUM_TOMATOES = 0
 scene_z_offset = -0.25
 bowl_0 = [-2.7, 0.5, 0.73+scene_z_offset]
 bowl_1 = [-2.7, 1.0, 0.73+scene_z_offset]
@@ -55,9 +55,9 @@ initial_scene = """
     name: oven1
     file: package://pizzabot/objects/ovenV1.sdf
 
-- add_model:
-    name: serving
-    file: package://pizzabot/objects/serving_shelf.sdf
+#- add_model:
+#    name: serving
+#    file: package://pizzabot/objects/serving_shelf.sdf
 
 - add_model:
     name: bowl0
@@ -108,12 +108,12 @@ initial_scene = """
       translation: [1, 1.5, """+str(-0.015+scene_z_offset)+"""]
       rotation: !Rpy { deg: [0.0, 0.0, -90.0 ]}
 
-- add_weld:
-    parent: world
-    child: serving::serving_shelf
-    X_PC:
-      translation: [0, 2.5, """+str(-0.015+scene_z_offset)+"""]
-      rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
+#- add_weld:
+#    parent: world
+#    child: serving::serving_shelf
+#    X_PC:
+#      translation: [0, 2.5, """+str(-0.015+scene_z_offset)+"""]
+#      rotation: !Rpy { deg: [90.0, 0.0, 0.0]}
 
 
 """
