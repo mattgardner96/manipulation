@@ -4,6 +4,3 @@
 [submodule "manipulation"]
 	path = manipulation
 	url = https://github.com/RussTedrake/manipulation.git
-[submodule "psets"]
-	path = psets
-	url = https://github.com/mattgardner96/manipulation-private.git
